@@ -36,3 +36,5 @@ Suggests: testthat,
     KernSmooth
 VignetteBuilder: knitr
 Additional_repositories: https://grafab.github.io/drat/
+URL: http://github.com/grafab/gsrc
+BugReports: http://github.com/grafab/gsrc/issues
