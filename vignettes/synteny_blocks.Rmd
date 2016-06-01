@@ -1,0 +1,158 @@
+---
+title: "Synteny Blocks"
+author: "Fabian Grandke"
+date: "March 1, 2016"
+output: rmarkdown::html_vignette
+vignette: >
+  %\VignetteIndexEntry{Synteny Blocks}
+  %\VignetteEngine{knitr::rmarkdown}
+  %\VignetteEncoding{UTF-8}
+---
+
+#Introduction
+
+This vignette explains how to create a synteny block object in R.
+First we load some publicly available data and filter it.
+Then we define blocks of homeologous chromosomes.
+
+We require some packages to be installed:
+```{r, results="hide"}
+library(openxlsx)
+library(dbscan)
+library(gsrc)
+```
+#Data
+We download the supplementary files 6 and 7 from [Bancroft et al.](http://www.sciencedirect.com/science/article/pii/S2352340915000062).
+```{r}
+tf1 <- tempfile()
+utils::download.file(url="http://www.sciencedirect.com/science/MiamiMultiMediaURL/1-s2.0-S2352340915000062/1-s2.0-S2352340915000062-mmc6.xlsx/311593/html/S2352340915000062/5528a88e468e01866744f28fc42139c6/mmc6.xlsx",
+              destfile = tf1, method = "internal", mode = "wb")
+synA <- openxlsx::read.xlsx(tf1)
+utils::download.file(url = "http://www.sciencedirect.com/science/MiamiMultiMediaURL/1-s2.0-S2352340915000062/1-s2.0-S2352340915000062-mmc7.xlsx/311593/html/S2352340915000062/d616ded5ee9399d4fe29df72435780c9/mmc7.xlsx",
+              destfile = tf1, method = "internal", mode = "wb")
+synC <- openxlsx::read.xlsx(tf1)
+unlink(tf1)
+```
+
+
+##Filter data
+The data set consists of unigenes, that have been mapped to the A and C genomes.
+Some unigenes could only be mapped to one of them.
+We want to filter these out.
+```{r}
+synA <- synA[synA$unigene %in% synC$unigene, ]
+synC <- synC[synC$unigene %in% synA$unigene, ]
+```
+
+The data set contains SNPs which do not have a unigene identifier.
+We filter them out, as well.
+```{r}
+synA <- synA[!is.na(synA$unigene),]
+synC <- synC[!is.na(synC$unigene),]
+```
+
+We drop some unused columns.
+```{r}
+synA <- synA[, c(2,5,6,7)]
+synC <- synC[, c(2,5,6,7)]
+```
+
+##Merge data sets
+Now, the two tables can be merged:
+```{r}
+syn_uni <- merge(synA, synC, by = "unigene")
+syn_uni <- syn_uni[order(syn_uni$A.Chr, syn_uni$A.start),]
+```
+
+We create four columns from the existing data and add them to the dataset.
+```{r}
+syn_uni$Alev <- as.factor(syn_uni$A.Chr)
+syn_uni$Clev <- as.factor(syn_uni$C.Chr)
+syn_uni$AGlo <- syn_uni$A.start
+syn_uni$CGlo <- syn_uni$C.start
+```
+
+## Calculate global positions
+We use the positions of the genes to calculate the chromosome lengths.
+They are added to the positions to calculate global positions.
+For instance, if chromosome A1 is 3,000,000 bp long,  position 150,000 on chromosome A2 becomes 3,150,000 globally.
+Global positions are required for plotting.
+```{r}
+amaxs <- sapply(levels(syn_uni$Alev), function(x) max(syn_uni$A.start[syn_uni$A.Chr==x]))
+for(i in 2:length(levels(syn_uni$Alev))){
+  syn_uni$AGlo[syn_uni$A.Chr == levels(syn_uni$Alev)[i]] <- syn_uni$AGlo[syn_uni$A.Chr == levels(syn_uni$Alev)[i]] + sum(amaxs[1:(i-1)])
+}
+```
+We repeat the same for the C chromosome.
+```{r}
+cmaxs <- sapply(levels(syn_uni$Clev), function(x) max(syn_uni$C.start[syn_uni$C.Chr==x]))
+for(i in 2:length(levels(syn_uni$Clev))){
+  syn_uni$CGlo[syn_uni$C.Chr == levels(syn_uni$Clev)[i]] <- syn_uni$CGlo[syn_uni$C.Chr == levels(syn_uni$Clev)[i]] + sum(cmaxs[1:(i-1)])
+}
+```
+
+Now, we can caluclate the chromosome ends.
+```{r}
+csamax <- cumsum(amaxs)
+cscmax <- cumsum(cmaxs)
+```
+
+We visualize the positions:
+```{r, fig.show = "hold", fig.width = 10, fig.height = 10}
+plot(syn_uni$AGlo, syn_uni$CGlo, pch = 19,cex=0.2, col = rgb(0,0,0,alpha = 0.05))
+abline(v = c(0, csamax), h=c(0, cscmax))
+```
+
+
+We apply the function `find_blocks`to our dataset.
+```{r}
+syn_uni2 <- syn_uni[, c(2, 3, 5, 6)]
+names(syn_uni2) <- c("chr1", "pos1", "chr2", "pos2")
+synteny_blocks <- find_blocks(syn_uni2, eps = 2000000, minPts = 50,
+                              minLength = 1000000, maxLength = 10000000)
+```
+
+Lastly, we add an offset to the data.frame.
+```{r}
+synteny_blocks$blocks$off1 <- c(0,cumsum(amaxs))[match(synteny_blocks$blocks$chr1, names(amaxs))]
+synteny_blocks$blocks$off2 <- c(0,cumsum(cmaxs))[match(synteny_blocks$blocks$chr2, names(cmaxs))]
+```
+
+We created a synteny block object that can be used in our package.
+We can visualize as follows:
+```{r, fig.show = "hold", fig.width = 10, fig.height = 5}
+plot.new()
+cols <- rainbow(n = 10, start = 0, end = 1, alpha = 0.2)
+max1 <- max(synteny_blocks$blocks$end1) 
+max2 <- max(synteny_blocks$blocks$end2) 
+axis(3, at = (csamax - min(amaxs) / 2) / max(csamax), 
+     labels = unique(synA$A.Chr), tick = FALSE, cex.axis = 0.8, las = 1)
+axis(1, at = (cscmax - min(cmaxs) / 2) / max(cscmax), labels = unique(synC$C.Chr), tick = FALSE, cex.axis = 0.8, las = 1)
+y <- c(1, 1, 0, 0)
+for(i in 1:nrow(synteny_blocks$blocks)){
+  x <- c(synteny_blocks$blocks$start1[i], 
+         synteny_blocks$blocks$end1[i], 
+         synteny_blocks$blocks$end2[i], 
+         synteny_blocks$blocks$start2[i])
+  x <- c(x[1:2] / max1, x[3:4] / max2)
+  polygon(x, y, col = cols[unique(synteny_blocks$blocks$chr1) %in% synteny_blocks$blocks$chr1[i]])
+}
+
+```
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+```{r, cache=FALSE}
+sessionInfo()
+```
