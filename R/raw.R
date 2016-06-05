@@ -17,7 +17,7 @@
 #' @param sd Logical, if standard deviation should be read in.
 #' @return An object containing the identities from the idat files.
 #' @examples
-#' library(brassicaData)
+#' if(require(brassicaData)){
 #' files <- list.files(system.file("extdata", package = "brassicaData"),
 #' full.names = TRUE, pattern = "idat")
 #' samples <- read_sample_sheets(files = list.files(system.file("extdata",
@@ -27,6 +27,7 @@
 #' data("chrPos", package = "brassicaData", envir = environment())
 #' raw_data <- read_intensities(files = files, dict = dictionary,
 #' cnames = column_names, pos = chrPos)
+#' }
 #' @export
 read_intensities <- function(files, dict = NULL, cnames = NULL, pos = NULL,
                              beads = FALSE, sd = FALSE) {

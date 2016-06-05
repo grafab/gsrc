@@ -34,7 +34,7 @@ This function is provided to simplify the use of the example data.
 For data produced with other arrays use respective functions available in CRAN or Bioconductor.
 }
 \examples{
-library(brassicaData)
+if(require(brassicaData)){
 files <- list.files(system.file("extdata", package = "brassicaData"),
 full.names = TRUE, pattern = "idat")
 samples <- read_sample_sheets(files = list.files(system.file("extdata",
@@ -44,5 +44,6 @@ data("dictionary", package = "brassicaData", envir = environment())
 data("chrPos", package = "brassicaData", envir = environment())
 raw_data <- read_intensities(files = files, dict = dictionary,
 cnames = column_names, pos = chrPos)
+}
 }
 
