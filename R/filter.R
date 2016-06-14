@@ -33,6 +33,9 @@ filt_samp <- function(dat, samples){
     if(is.matrix(dat$baf)) dat$baf <- dat$baf[-filt, ]
     if(is.matrix(dat$rratio)) dat$rratio <- dat$rratio[-filt, ]
     if(is.matrix(dat$geno)) dat$geno <- dat$geno[-filt, ]
+    if(is.matrix(dat$cnv)) dat$cnv <- dat$cnv[-filt, ]
+    if(is.matrix(dat$tl)) dat$tl <- dat$tl[-filt, ]
+    if(is.data.frame(dat$cna)) dat$cna <- dat$cna[,dat$cna$ID %in% dat$samples]
   }
   dat
 }
