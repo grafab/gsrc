@@ -79,11 +79,14 @@ read_intensities <- function(files, dict = NULL, cnames = NULL, pos = NULL,
 #' Read one or multiple sample sheets in csv format.
 #' The information is used to translate between cryptic names
 #' (e.g. provided by service provider) and names that can be interpreted.
+#' As an alternative to this function, the information can be provided as data.frame with the two columns
+#' "Name" and "ID".
 #'
 #' @param files Path to sample sheet.
 #' @param skip Integer, lines to skip, before data is read.
 #' If not provided, the program looks for entry __[Data]__
-#' @param cols Character vector, column names to use.
+#' @param cols Character vector, column names to use. First one is the Sample ID, Second and third 
+#' ones are barcode and position.
 #' @return A data.frame containing the idat names and the meaningful names of the samples.
 #' @examples
 #' if(require(brassicaData)){
@@ -107,19 +110,20 @@ read_sample_sheets <- function(files, skip = NULL, cols =
     }
     if(!is.null(tab) & is.null(cols)){
       both <- intersect(colnames(tab), colnames(tab2))
+      if(length(both) < length(cols)) stop("Not all files have the required column names.")
       tab <- tab[, both]
       tab2 <- tab2[, both]
     }else if(!is.null(tab)){
-      tab <- tab[, 1:length(cols)]
-      tab2 <- tab2[, 1:length(cols)]
+      tab <- tab[, cols]
+      tab2 <- tab2[, cols]
       colnames(tab) <- colnames(tab2) <- cols
     }else if(is.null(tab)){
-      tab2 <- tab2[, 1:length(cols)]
+      tab2 <- tab2[, cols]
       colnames(tab2) <- cols
     }
     tab <- rbind(tab, tab2)
   }
-  return(data.frame(Names = tab$SampleID, ID = paste(tab$SentrixBarcode_A, tab$SentrixPosition_A, sep = "_"),stringsAsFactors = FALSE))
+  return(data.frame(Names = tab[, cols[1]], ID = paste(tab[, cols[2]], tab[, cols[3]], sep = "_"), stringsAsFactors = FALSE))
 }
 
 
