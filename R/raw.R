@@ -113,7 +113,7 @@ read_intensities <-
 #' }
 #' @export
 read_sample_sheets <- function(files, skip = NULL, cols =
-                                 c("SampleID", "SentrixBarcode_A", "SentrixPosition_A")) {
+                                 c("Sample_ID", "SentrixBarcode_A", "SentrixPosition_A")) {
   tab <- c()
   for (i in files) {
     if (missing(skip)) {
