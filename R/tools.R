@@ -11,7 +11,7 @@
 #' raw_napus <- rename_samples(raw_napus, samples = samples[,2:1], suffix = c("_Grn", "_Red"))
 #' }
 #' @export
-rename_samples <- function(dat, ...){
+rename_samples <- function(dat, ...) {
   UseMethod("rename_samples")
 }
 
@@ -19,35 +19,39 @@ rename_samples <- function(dat, ...){
 #' @param suffix Vector of two characters (e.g. c("Grn.idat", "Red.idat")) describing which suffix should be appended to the sample name.
 #' @rdname rename_samples
 #' @export
-rename_samples.raw_data <- function(dat, samples, suffix = NULL, ...){
-  samples1 <- samples[, 1]
-  samples2 <- samples[, 2]
-  cnames <- dat$samples
-  if(length(samples[, 1]) == ncol(dat$raw)){    #if one name per column
-    cnames <- samples2[match(samples1, cnames)]
-  }else{                                    # if only one name for each pair of columns
-    for(i in 1:length(samples1)){
-      coln <- grep(samples1[i], cnames)
-      if(!is.null(coln)){
-        if(is.null(suffix)){
-          suffix <- unlist(strsplit(cnames[coln], split = samples1[i]))
-          suffix <- suffix[c(2, 4)]
+rename_samples.raw_data <-
+  function(dat, samples, suffix = NULL, ...) {
+    samples1 <- samples[, 1]
+    samples2 <- samples[, 2]
+    cnames <- dat$samples
+    if (length(samples[, 1]) == ncol(dat$raw)) {
+      #if one name per column
+      cnames <- samples2[match(samples1, cnames)]
+    }else{
+      # if only one name for each pair of columns
+      for (i in 1:length(samples1)) {
+        coln <- grep(samples1[i], cnames)
+        if (!is.null(coln)) {
+          if (is.null(suffix)) {
+            suffix <- unlist(strsplit(cnames[coln], split = samples1[i]))
+            suffix <- suffix[c(2, 4)]
+          }
+          newName <- paste(samples2[i], suffix , sep = "")
+          cnames[coln] <- newName
         }
-        newName <- paste(samples2[i], suffix , sep = "")
-        cnames[coln] <- newName
       }
     }
+    dat$samples <- make.names(cnames, unique = TRUE)
+    dat
   }
-  dat$samples <- make.names(cnames, unique = TRUE)
-  dat
-}
 
 #' @rdname rename_samples
 #' @export
-rename_samples.norm_data <- function(dat, samples, ...){
+rename_samples.norm_data <- function(dat, samples, ...) {
   samples1 <- samples[, 1]
   samples2 <- samples[, 2]
-  dat$samples <- make.names(samples2[match(samples1, dat$samples)], unique = TRUE)
+  dat$samples <-
+    make.names(samples2[match(samples1, dat$samples)], unique = TRUE)
   dat
 }
 
@@ -68,7 +72,7 @@ rename_samples.norm_data <- function(dat, samples, ...){
 #' dat <- remove_suffix(dat, "_Grn")
 #' }
 #' @export
-remove_suffix <- function(dat, suffix){
+remove_suffix <- function(dat, suffix) {
   dat$samples <- unlist(strsplit(dat$samples,suffix))
   dat
 }
@@ -86,56 +90,62 @@ remove_suffix <- function(dat, suffix){
 #' @param method Character, "mixture", "density" or "histogram".
 #' Defines which method is used to transform the data into a distribution.
 #' @keywords internal
-find_peak <- function(dat, npeaks = NULL, breaks = round(length(dat) * 0.1),
-                      check = FALSE, method = "density"){
-  method <- match.arg(arg = method, choices = c("mixture", "density", "histogram"))
-  if(method == "mixture"){
-    require_package("mixtools")
-    if(.Platform$OS.type == "unix") {
-      sink('/dev/null')
-    } else {
-      sink("NUL")
-    }
-    nm2 <- suppressMessages(mixtools::normalmixEM(dat, mu = c(min(dat), max(dat))))
-    nm3 <- suppressMessages(mixtools::normalmixEM(dat, mu = c(min(dat), stats::median(dat), max(dat))))
-    sink()
-    if(nm2$loglik > nm3$loglik){
-      return(nm2$mu)
+find_peak <-
+  function(dat, npeaks = NULL, breaks = round(length(dat) * 0.1),
+           check = FALSE, method = "density") {
+    method <-
+      match.arg(arg = method, choices = c("mixture", "density", "histogram"))
+    if (method == "mixture") {
+      require_package("mixtools")
+      if (.Platform$OS.type == "unix") {
+        sink('/dev/null')
+      } else {
+        sink("NUL")
+      }
+      nm2 <-
+        suppressMessages(mixtools::normalmixEM(dat, mu = c(min(dat), max(dat))))
+      nm3 <-
+        suppressMessages(mixtools::normalmixEM(dat, mu = c(
+          min(dat), stats::median(dat), max(dat)
+        )))
+      sink()
+      if (nm2$loglik > nm3$loglik) {
+        return(nm2$mu)
+      }else{
+        return(nm3$mu)
+      }
+    }else if (method == "histogram") {
+      histogram <- graphics::hist(dat, breaks = breaks, plot = FALSE)
+      y <- histogram$density
+      x <- histogram$counts
+      z <- histogram$mids
     }else{
-      return(nm3$mu)
+      dens <- stats::density(dat)
+      y <- dens$y
+      x <- dens$y
+      z <- dens$x
     }
-  }else if(method == "histogram"){
-    histogram <- graphics::hist(dat, breaks = breaks, plot = FALSE)
-    y <- histogram$density
-    x <- histogram$counts
-    z <- histogram$mids
-  }else{
-    dens <- stats::density(dat)
-    y <- dens$y
-    x <- dens$y
-    z <- dens$x
-  }
-  peaks <- which(diff(sign(diff(y))) == - 2) + 1
-  if(is.null(npeaks) | length(peaks) <= npeaks){
-    index <- 1:length(peaks)
-  }else if(length(peaks) > npeaks){
-    index <- length(peaks) - npeaks
-    index <- sort(x[peaks])[index]
-    index <- which(x[peaks] > index)
-  }
-  peaks <- sort(z[peaks][index])
-  if(!is.null(npeaks) & check & length(peaks) == 3){
-    if(npeaks == 3 ){
-      tmp <- peaks
-      tmp <- tmp - tmp[1]
-      tmp <- tmp / tmp[3]
-      if(tmp[2] < 0.4 | tmp[2] > 0.6){
-        peaks[2] <- (peaks[1] + peaks[3]) / 2
+    peaks <- which(diff(sign(diff(y))) == -2) + 1
+    if (is.null(npeaks) | length(peaks) <= npeaks) {
+      index <- 1:length(peaks)
+    }else if (length(peaks) > npeaks) {
+      index <- length(peaks) - npeaks
+      index <- sort(x[peaks])[index]
+      index <- which(x[peaks] > index)
+    }
+    peaks <- sort(z[peaks][index])
+    if (!is.null(npeaks) & check & length(peaks) == 3) {
+      if (npeaks == 3) {
+        tmp <- peaks
+        tmp <- tmp - tmp[1]
+        tmp <- tmp / tmp[3]
+        if (tmp[2] < 0.4 | tmp[2] > 0.6) {
+          peaks[2] <- (peaks[1] + peaks[3]) / 2
+        }
       }
     }
+    peaks
   }
-  peaks
-}
 #' Require package wrapper
 #'
 #' Wrapper to require package and return an error, if it is missing.
@@ -157,16 +167,17 @@ require_package <- function(pkg) {
 #' @return Numeric of interpolated intensity value.
 #'
 #' @keywords internal
-interpol <- function(theta, hcenters, vcenters){
+interpol <- function(theta, hcenters, vcenters) {
   d1 <- abs(theta - hcenters[1])
   d2 <- abs(theta - hcenters[2])
   d3 <- abs(theta - hcenters[3])
-  ratio1 <- d2 / (d1 + d2) * vcenters[1] + d1 / (d1 + d2) * vcenters[2]
-  ratio2 <- d2 / (d2 + d3) * vcenters[3] + d3 / (d2 + d3) * vcenters[2]
+  ratio1 <-
+    d2 / (d1 + d2) * vcenters[1] + d1 / (d1 + d2) * vcenters[2]
+  ratio2 <-
+    d2 / (d2 + d3) * vcenters[3] + d3 / (d2 + d3) * vcenters[2]
   ratio <- theta
   ratio[theta < hcenters[2]] <- ratio1[theta < hcenters[2]]
   ratio[theta >= hcenters[2]] <- ratio2[theta >= hcenters[2]]
   ratio[is.null(ratio)] <- mean(vcenters, na.rm = TRUE)
   ratio
 }
-

@@ -13,29 +13,42 @@
 #' raw_napus <- filt_samp(raw_napus, check_raw(raw = raw_napus, plot = FALSE, thresh = 28000))
 #' }
 #' @export
-filt_samp <- function(dat, samples){
-  if(is.character(samples)){
+filt_samp <- function(dat, samples) {
+  if (is.character(samples)) {
     cnames <- dat$samples
     filt <- c()
-    for(i in samples){
+    for (i in samples) {
       filt <- c(filt, grep(i, cnames))
     }
   }else{
     filt <- samples
   }
-  if(length(filt) > 0){
+  if (length(filt) > 0) {
     dat$samples <- dat$samples[-filt]
-    if(is.matrix(dat$raw)) dat$raw <- dat$raw[, -filt]
-    if(is.matrix(dat$sd) & dim(dat$sd)[2] == length(samples)) dat$sd <- dat$sd[, -filt]
-    if(is.matrix(dat$beads) & dim(dat$beads)[2] == length(samples)) dat$beads <- dat$beads[, -filt]
-    if(is.matrix(dat$intensity)) dat$intensity <- dat$intensity[, -filt]
-    if(is.matrix(dat$theta)) dat$theta <- dat$theta[, -filt]
-    if(is.matrix(dat$baf)) dat$baf <- dat$baf[, -filt]
-    if(is.matrix(dat$rratio)) dat$rratio <- dat$rratio[, -filt]
-    if(is.matrix(dat$geno)) dat$geno <- dat$geno[, -filt]
-    if(is.matrix(dat$cnv)) dat$cnv <- dat$cnv[, -filt]
-    if(is.matrix(dat$tl)) dat$tl <- dat$tl[, -filt]
-    if(is.data.frame(dat$cna)) dat$cna <- dat$cna[,dat$cna$ID %in% dat$samples]
+    if (is.matrix(dat$raw))
+      dat$raw <- dat$raw[,-filt]
+    if (is.matrix(dat$sd) &
+        dim(dat$sd)[2] == length(samples))
+      dat$sd <- dat$sd[,-filt]
+    if (is.matrix(dat$beads) &
+        dim(dat$beads)[2] == length(samples))
+      dat$beads <- dat$beads[,-filt]
+    if (is.matrix(dat$intensity))
+      dat$intensity <- dat$intensity[,-filt]
+    if (is.matrix(dat$theta))
+      dat$theta <- dat$theta[,-filt]
+    if (is.matrix(dat$baf))
+      dat$baf <- dat$baf[,-filt]
+    if (is.matrix(dat$rratio))
+      dat$rratio <- dat$rratio[,-filt]
+    if (is.matrix(dat$geno))
+      dat$geno <- dat$geno[,-filt]
+    if (is.matrix(dat$cnv))
+      dat$cnv <- dat$cnv[,-filt]
+    if (is.matrix(dat$tl))
+      dat$tl <- dat$tl[,-filt]
+    if (is.data.frame(dat$cna))
+      dat$cna <- dat$cna[,dat$cna$ID %in% dat$samples]
   }
   dat
 }
@@ -62,23 +75,29 @@ filt_samp <- function(dat, samples){
 #' }
 #' @export filt_snps
 #' @rdname filt_snps
-filt_snps <- function(dat, filt){
+filt_snps <- function(dat, filt) {
   UseMethod("filt_snps")
 }
 
 #' @rdname filt_snps
 #' @export
-filt_snps.raw_data <- function(dat, filt){
-  if(is.character(filt)){
+filt_snps.raw_data <- function(dat, filt) {
+  if (is.character(filt)) {
     filt <- which(dat$snps %in% filt)
   }
-  if(length(filt) > 0){
-    if(is.matrix(dat$raw)) dat$raw <- dat$raw[-filt, ]
-    if(is.vector(dat$snps)) dat$snps <- dat$snps[-filt]
-    if(is.matrix(dat$sd)) dat$sd <- dat$sd[-filt, ]
-    if(is.matrix(dat$beads)) dat$beads <- dat$beads[-filt, ]
-    if(is.vector(dat$pos)) dat$pos <- dat$pos[-filt]
-    if(is.vector(dat$chr)) dat$chr <- dat$chr[-filt]
+  if (length(filt) > 0) {
+    if (is.matrix(dat$raw))
+      dat$raw <- dat$raw[-filt,]
+    if (is.vector(dat$snps))
+      dat$snps <- dat$snps[-filt]
+    if (is.matrix(dat$sd))
+      dat$sd <- dat$sd[-filt,]
+    if (is.matrix(dat$beads))
+      dat$beads <- dat$beads[-filt,]
+    if (is.vector(dat$pos))
+      dat$pos <- dat$pos[-filt]
+    if (is.vector(dat$chr))
+      dat$chr <- dat$chr[-filt]
   }
   dat
 }
@@ -86,22 +105,31 @@ filt_snps.raw_data <- function(dat, filt){
 
 #' @rdname filt_snps
 #' @export
-filt_snps.norm_data <- function(dat, filt){
-  if(is.character(filt)){
+filt_snps.norm_data <- function(dat, filt) {
+  if (is.character(filt)) {
     filt <- which(dat$snps %in% filt)
   }
-  if(length(filt) > 0){
-    if(is.matrix(dat$intensity)) dat$intensity <- dat$intensity[-filt, ]
-    if(is.matrix(dat$theta)) dat$theta <- dat$theta[-filt, ]
-    if(is.matrix(dat$baf)) dat$baf <- dat$baf[-filt, ]
-    if(is.matrix(dat$rratio)) dat$rratio <- dat$rratio[-filt, ]
-    if(is.matrix(dat$geno)) dat$geno <- dat$geno[-filt, ]
-    if(is.matrix(dat$cnv)) dat$cnv <- dat$cnv[-filt, ]
-    if(is.vector(dat$pos)) dat$pos <- dat$pos[-filt]
-    if(is.vector(dat$chr)) dat$chr <- dat$chr[-filt]
-    if(is.vector(dat$snps)) dat$snps <- dat$snps[-filt]
-    if(is.matrix(dat$cnv)) dat$cnv <- dat$cnv[-filt, ]
+  if (length(filt) > 0) {
+    if (is.matrix(dat$intensity))
+      dat$intensity <- dat$intensity[-filt,]
+    if (is.matrix(dat$theta))
+      dat$theta <- dat$theta[-filt,]
+    if (is.matrix(dat$baf))
+      dat$baf <- dat$baf[-filt,]
+    if (is.matrix(dat$rratio))
+      dat$rratio <- dat$rratio[-filt,]
+    if (is.matrix(dat$geno))
+      dat$geno <- dat$geno[-filt,]
+    if (is.matrix(dat$cnv))
+      dat$cnv <- dat$cnv[-filt,]
+    if (is.vector(dat$pos))
+      dat$pos <- dat$pos[-filt]
+    if (is.vector(dat$chr))
+      dat$chr <- dat$chr[-filt]
+    if (is.vector(dat$snps))
+      dat$snps <- dat$snps[-filt]
+    if (is.matrix(dat$cnv))
+      dat$cnv <- dat$cnv[-filt,]
   }
   dat
 }
-
