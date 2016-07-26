@@ -111,13 +111,13 @@ filt_snps.norm_data <- function(dat, filt) {
   }
   if (length(filt) > 0) {
     if (is.matrix(dat$intensity))
-      dat$intensity <- dat$intensity[-filt,]
+      dat$intensity <- dat$intensity[-filt, ]
     if (is.matrix(dat$theta))
-      dat$theta <- dat$theta[-filt,]
+      dat$theta <- dat$theta[-filt, ]
     if (is.matrix(dat$baf))
-      dat$baf <- dat$baf[-filt,]
+      dat$baf <- dat$baf[-filt, ]
     if (is.matrix(dat$rratio))
-      dat$rratio <- dat$rratio[-filt,]
+      dat$rratio <- dat$rratio[-filt, ]
     if (is.matrix(dat$geno))
       dat$geno <- dat$geno[-filt,]
     if (is.matrix(dat$cnv))
@@ -129,7 +129,11 @@ filt_snps.norm_data <- function(dat, filt) {
     if (is.vector(dat$snps))
       dat$snps <- dat$snps[-filt]
     if (is.matrix(dat$cnv))
-      dat$cnv <- dat$cnv[-filt,]
+      dat$cnv <- dat$cnv[-filt, ]
+    if (is.matrix(dat$beads))
+      dat$cnv <- dat$cnv[-filt, ]
+    if (is.matrix(dat$sd))
+      dat$cnv <- dat$cnv[-filt, ]
   }
   dat
 }
