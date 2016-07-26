@@ -131,9 +131,9 @@ filt_snps.norm_data <- function(dat, filt) {
     if (is.matrix(dat$cnv))
       dat$cnv <- dat$cnv[-filt, ]
     if (is.matrix(dat$beads))
-      dat$cnv <- dat$cnv[-filt, ]
+      dat$beads <- dat$beads[-filt, ]
     if (is.matrix(dat$sd))
-      dat$cnv <- dat$cnv[-filt, ]
+      dat$sd <- dat$sd[-filt, ]
   }
   dat
 }
