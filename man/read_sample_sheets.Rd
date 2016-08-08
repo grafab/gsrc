@@ -4,7 +4,7 @@
 \alias{read_sample_sheets}
 \title{Read sample sheet(s)}
 \usage{
-read_sample_sheets(files, skip = NULL, cols = c("SampleID",
+read_sample_sheets(files, skip = NULL, cols = c("Sample_ID",
   "SentrixBarcode_A", "SentrixPosition_A"))
 }
 \arguments{
@@ -13,7 +13,7 @@ read_sample_sheets(files, skip = NULL, cols = c("SampleID",
 \item{skip}{Integer, lines to skip, before data is read.
 If not provided, the program looks for entry __[Data]__}
 
-\item{cols}{Character vector, column names to use. First one is the Sample ID, Second and third 
+\item{cols}{Character vector, column names to use. First one is the Sample ID, Second and third
 ones are barcode and position.}
 }
 \value{

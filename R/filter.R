@@ -137,3 +137,50 @@ filt_snps.norm_data <- function(dat, filt) {
   }
   dat
 }
+
+#' Filter Copy number variations
+#'
+#' Short CNV stretches can be filtered out.
+#'
+#' @param dat norm_data object.
+#' @param thresh Integer, lower threshold for filtering CNVs.
+#' @return norm_data object
+#' @examples
+#' if(require(brassicaData)){
+#' data("raw_napus", package = "brassicaData", envir = environment())
+#' dat <- intens_theta(raw_napus)
+#' dat <- remove_suffix(dat, "_Grn")
+#' dat <- geno_baf_rratio(dat, delthresh = 11)
+#' dat <- segm(dat)
+#' dat <- cnv(dat, dup = 0.03, del = -0.06)
+#' dat <- filter_cnv(dat)
+#' }
+#' }
+#' @export
+filter_cnv <- function(dat, thresh = 5) {
+  stub_zero <- function(x, y) {
+    run <- rle(x)
+    chpos <- which(run$lengths < y & run$values == 1)
+    chneg <- which(run$lengths < y & run$values == -1)
+    if (!is.null(chpos)) {
+      if (chpos[1] == 1)
+        x[1:run$lengths[1]] <- 0
+      for (i in chpos) {
+        start <- sum(run$lengths[1:(i - 1)])
+        x[(start + 1):(start + run$lengths[i])] <- 0
+      }
+    }
+    if (!is.null(chneg)) {
+      if (chneg[1] == 1)
+        x[1:run$lengths[1]] <- 0
+      for (i in chneg) {
+        start <- sum(run$lengths[1:(i - 1)])
+        x[(start + 1):(start + run$lengths[i])] <- 0
+      }
+    }
+    x
+  }
+  dat$cnv <- apply(dat$cnv, 2, stub_zero, y = thresh)
+  dat
+}
+
