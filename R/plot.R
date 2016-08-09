@@ -529,3 +529,59 @@ plot_trans_locations <- function(dat, sb = NULL) {
   )
   par(op)
 }
+
+#' Plot Copy Number Variations
+#'
+#' Plots copy number variations in a grid to allow for comparisons between individuals.
+#' Deletions and duplications are represented in red and green, respectively.
+#'
+#' @param dat List object, containing vectors samples, pos and chr and matrix cnv.
+#' @param ... are forwarded to the image() command.
+#' @import graphics
+#' @examples
+#' if(require(brassicaData)){
+#' data(raw_napus, package = "brassicaData", envir = environment())
+#' \dontshow{
+#' raw_napus <- filt_samp(raw_napus, raw_napus$samples[-(1:10)])
+#' raw_napus <- filt_snps(raw_napus, raw_napus$snps[-(1:100)][-(30000:30100)])
+#' }
+#' dat <- intens_theta(raw_napus)
+#' dat <- remove_suffix(dat, "_Grn")
+#' dat <- geno_baf_rratio(dat, delthresh = 11)
+#' dat <- segm(dat)
+#' dat <- cnv(dat, dup = 0.03, del = -0.06)
+#' plot_cnv(dat)
+#' }
+#' @export
+plot_cnv <- function(dat, ...) {
+  op <- graphics::par(mar = c(5.1, 6.1, 4.1, 2.1))
+  graphics::image(
+      dat$cnv[order(dat$chr, dat$pos), ], 
+      xaxt = "n", 
+      yaxt = "n", 
+      col = c("red", "white","green"), 
+      ...
+    )
+  # y-axis
+  graphics::axis(
+    side = 2, 
+    at = seq(0,1,length.out = length(dat$samples)), 
+    labels = rev(dat$samples), 
+    las = 1, 
+    lwd = 0, 
+    lwd.ticks = 1
+  )
+  pssamp <- 1:(length(dat$samples) - 1) / (length(dat$samples) - 1)
+  graphics::abline(h = pssamp - min(pssamp) / 2)
+  # x-axis
+  tsnps <- table(dat$chr)
+  cssnps <- cumsum(tsnps)
+  mxsnps <- cssnps / max(cssnps)
+  fnsnps <- mxsnps - diff(c(0,mxsnps)) / 2
+  graphics::abline(v = mxsnps, lwd = 1, col = rgb(0,0,0,0.5))
+  graphics::axis(side = 1, 
+       at = fnsnps, 
+       labels = names(tsnps), 
+       lwd = 0)
+  graphics::par(op)
+}

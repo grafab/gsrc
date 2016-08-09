@@ -1,3 +1,8 @@
+gsrc 1.0.3 (2016-08-09)
+--------------------------------------------------------------------
+filter_cnv function added
+plot_cnv function added
+
 gsrc 1.0.2 (2016-07-26)
 --------------------------------------------------------------------
 Bead and SD information from raw data are now supported in the normalized data

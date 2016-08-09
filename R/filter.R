@@ -155,14 +155,13 @@ filt_snps.norm_data <- function(dat, filt) {
 #' dat <- cnv(dat, dup = 0.03, del = -0.06)
 #' dat <- filter_cnv(dat)
 #' }
-#' }
 #' @export
 filter_cnv <- function(dat, thresh = 5) {
   stub_zero <- function(x, y) {
     run <- rle(x)
     chpos <- which(run$lengths < y & run$values == 1)
     chneg <- which(run$lengths < y & run$values == -1)
-    if (!is.null(chpos)) {
+    if (length(chpos) > 0) {
       if (chpos[1] == 1)
         x[1:run$lengths[1]] <- 0
       for (i in chpos) {
@@ -170,7 +169,7 @@ filter_cnv <- function(dat, thresh = 5) {
         x[(start + 1):(start + run$lengths[i])] <- 0
       }
     }
-    if (!is.null(chneg)) {
+    if (length(chneg) > 0) {
       if (chneg[1] == 1)
         x[1:run$lengths[1]] <- 0
       for (i in chneg) {
