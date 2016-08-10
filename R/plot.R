@@ -536,6 +536,10 @@ plot_trans_locations <- function(dat, sb = NULL) {
 #' Deletions and duplications are represented in red and green, respectively.
 #'
 #' @param dat List object, containing vectors samples, pos and chr and matrix cnv.
+#' @param lwd Line width for raster.
+#' @param col Color of raster lines.
+#' @param x.cex Character size in x-axis.
+#' @param y.cex Character size in y-axis.
 #' @param ... are forwarded to the image() command.
 #' @import graphics
 #' @examples
@@ -553,35 +557,40 @@ plot_trans_locations <- function(dat, sb = NULL) {
 #' plot_cnv(dat)
 #' }
 #' @export
-plot_cnv <- function(dat, ...) {
-  op <- graphics::par(mar = c(5.1, 6.1, 4.1, 2.1))
-  graphics::image(
-      dat$cnv[order(dat$chr, dat$pos), ], 
-      xaxt = "n", 
-      yaxt = "n", 
-      col = c("red", "white","green"), 
+plot_cnv <-
+  function(dat, lwd = 1, col = rgb(0,0,0,0.5), x.cex = 1, y.cex = 1, ...) {
+    op <- graphics::par(mar = c(5.1, 6.1, 4.1, 2.1))
+    graphics::image(
+      dat$cnv[order(dat$chr, dat$pos),],
+      xaxt = "n",
+      yaxt = "n",
+      col = c("red", "white","green"),
       ...
     )
-  # y-axis
-  graphics::axis(
-    side = 2, 
-    at = seq(0,1,length.out = length(dat$samples)), 
-    labels = rev(dat$samples), 
-    las = 1, 
-    lwd = 0, 
-    lwd.ticks = 1
-  )
-  pssamp <- 1:(length(dat$samples) - 1) / (length(dat$samples) - 1)
-  graphics::abline(h = pssamp - min(pssamp) / 2)
-  # x-axis
-  tsnps <- table(dat$chr)
-  cssnps <- cumsum(tsnps)
-  mxsnps <- cssnps / max(cssnps)
-  fnsnps <- mxsnps - diff(c(0,mxsnps)) / 2
-  graphics::abline(v = mxsnps, lwd = 1, col = rgb(0,0,0,0.5))
-  graphics::axis(side = 1, 
-       at = fnsnps, 
-       labels = names(tsnps), 
-       lwd = 0)
-  graphics::par(op)
-}
+    # y-axis
+    graphics::axis(
+      side = 2,
+      at = seq(0,1,length.out = length(dat$samples)),
+      labels = rev(dat$samples),
+      las = 1,
+      lwd = 0,
+      lwd.ticks = 1,
+      cex.axis = y.cex
+    )
+    pssamp <- 1:(length(dat$samples) - 1) / (length(dat$samples) - 1)
+    graphics::abline(h = pssamp - min(pssamp) / 2, lwd = lwd, col = col)
+    # x-axis
+    tsnps <- table(dat$chr)
+    cssnps <- cumsum(tsnps)
+    mxsnps <- cssnps / max(cssnps)
+    fnsnps <- mxsnps - diff(c(0,mxsnps)) / 2
+    graphics::abline(v = mxsnps, lwd = lwd, col = col)
+    graphics::axis(
+      side = 1,
+      at = fnsnps,
+      labels = names(tsnps),
+      lwd = 0,
+      cex.axis = x.cex
+    )
+    graphics::par(op)
+  }

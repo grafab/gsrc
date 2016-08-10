@@ -4,10 +4,19 @@
 \alias{plot_cnv}
 \title{Plot Copy Number Variations}
 \usage{
-plot_cnv(dat, ...)
+plot_cnv(dat, lwd = 1, col = rgb(0, 0, 0, 0.5), x.cex = 1, y.cex = 1,
+  ...)
 }
 \arguments{
 \item{dat}{List object, containing vectors samples, pos and chr and matrix cnv.}
+
+\item{lwd}{Line width for raster.}
+
+\item{col}{Color of raster lines.}
+
+\item{x.cex}{Character size in x-axis.}
+
+\item{y.cex}{Character size in y-axis.}
 
 \item{...}{are forwarded to the image() command.}
 }
