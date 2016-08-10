@@ -20,19 +20,19 @@ Imports:
     preprocessCore,
     R6,
     utils,
-    grDevices
+    grDevices,
+    graphics,
+    dbscan,
+    Ckmeans.1d.dp,
+    DNAcopy,
+    openxlsx
 RoxygenNote: 5.0.1
 Suggests: testthat,
-    DNAcopy,
     knitr,
     rmarkdown,
-    Ckmeans.1d.dp,
     brassicaData,
     mixtools,
-    dbscan,
-    openxlsx,
     devtools,
-    graphics,
     KernSmooth
 VignetteBuilder: knitr
 Additional_repositories: https://grafab.github.io/drat/
