@@ -78,13 +78,13 @@ intens_theta <- function(raw, norm = "quantile",  scaling = "mean",
                                       atan2(raw$raw[, x], raw$raw[, x + 1]) / (pi / 2))),
                       ncol = ncol(raw$raw) / 2, byrow = FALSE)
   
-  if(is.matrix(raw$beads)){
+  if(is.matrix(raw$beads) && dim(raw$beads) != c(1,1)){
     out$beads <- matrix(unlist(lapply(sec,
                                       function(x) 
                                         (raw$beads[, x] +  raw$beads[, x + 1]) / 2)),
                         ncol = ncol(raw$raw) / 2, byrow = FALSE)
   }
-  if(is.matrix(raw$sd)){
+  if(is.matrix(raw$sd) && dim(raw$sd) != c(1,1)){
     out$sd <- matrix(unlist(lapply(sec,
                                       function(x) 
                                         (raw$sd[, x] + raw$sd[, x + 1]) / 2)),
