@@ -12,7 +12,8 @@
 #' The order (e.g. green,red) must be consistent for all samples.
 #' @param dict A dataframe with columns "idatID" and "name".
 #' @param cnames Vector of characters as column names.
-#' @param pos Position object with at least the column "name". Is used to filter out SNPs where the position is not known.
+#' @param pos Position object with three columns "name", "chromosome" and "position". 
+#' Can be used to filter out SNPs where the position is not known.
 #' @param beads Logical, if beads should be read in.
 #' @param sd Logical, if standard deviation should be read in.
 #' @return An object containing the identities from the idat files.
@@ -32,6 +33,8 @@
 read_intensities <-
   function(files, dict = NULL, cnames = NULL, pos = NULL,
            beads = FALSE, sd = FALSE) {
+    if (is.data.frame(pos) && ncol(tmp) >= 3 && !names(pos) == c("name", "chromosome", "position"))
+      stop("pos object needs to be data.fram with columns name, chromosome and position.")
     require_package("illuminaio")
     out <-
       list(

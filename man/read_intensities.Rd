@@ -16,7 +16,8 @@ The order (e.g. green,red) must be consistent for all samples.}
 
 \item{cnames}{Vector of characters as column names.}
 
-\item{pos}{Position object with at least the column "name". Is used to filter out SNPs where the position is not known.}
+\item{pos}{Position object with three columns "name", "chromosome" and "position". 
+Can be used to filter out SNPs where the position is not known.}
 
 \item{beads}{Logical, if beads should be read in.}
 
