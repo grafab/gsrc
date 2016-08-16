@@ -246,7 +246,10 @@ cnv <- function(dat, del = -0.1, dup = 0.1) {
 #' @param dat List object, containing at least two matrices "baf" and "rratio"
 #' and two vectors "chr" and "pos".
 #' @param sb synteny_info object
-#' @param min Integer, minimal number of markers below / above threshold.
+#' @param min1 Integer, minimal number of markers below / above threshold in the first genome.
+#' @param min2 Integer, minimal number of markers below / above threshold in the second genome.
+#' @param maxdiff Integer, maximal difference of marker numbers between corresponding deletion and duplication.
+#' Avoids false positives in case unique events of unequal size are in synteny by chance.
 #' @return norm_data object including a CNA object.
 #' @examples
 #' \dontrun{
@@ -262,39 +265,46 @@ cnv <- function(dat, del = -0.1, dup = 0.1) {
 #' }
 #' }
 #' @export
-trans_location <- function(dat, sb, min = 1L) {
-  sbb <- sb$blocks
-  sbc <- sb$chrs
-  out <- matrix(0, ncol = length(dat$samples), nrow = nrow(sbb))
-  for (i in 1:nrow(sbb)) {
-    off1 <- sbc$start[sbc$chr == sbb$chr1[i]]
-    off2 <- sbc$start[sbc$chr == sbb$chr2[i]]
-    cnv1 <- dat$cnv[dat$chr == sbb$chr1[i] &
-                      dat$pos > (sbb$start1[i] - off1) &
-                      dat$pos < (sbb$end1[i] - off1),]
-    cnv2 <- dat$cnv[dat$chr == sbb$chr2[i] &
-                      dat$pos > (sbb$start2[i] - off2) &
-                      dat$pos < (sbb$end2[i] - off2),]
-    if (nrow(cnv1) < 1 || nrow(cnv2) < 1)
-      next()
-    #Duplication
-    l1 <-
-      apply(cnv1, 2, function(x)
-        sum(x == 1, na.rm = TRUE) >= min)
-    if (any(l1)) {
-      l2 <- apply(cnv2, 2, function(x)
-        sum(x == -1, na.rm = TRUE) >= min)
-      out[i, l1 & l2] <- 1
+trans_location <-
+  function(dat, sb, min1 = 1L, min2 = min1, maxdiff = 4L) {
+    sbb <- sb$blocks
+    sbc <- sb$chrs
+    out <- matrix(0, ncol = length(dat$samples), nrow = nrow(sbb))
+    for (i in 1:nrow(sbb)) {
+      off1 <- sbc$start[sbc$chr == sbb$chr1[i]]
+      off2 <- sbc$start[sbc$chr == sbb$chr2[i]]
+      cnv1 <- dat$cnv[dat$chr == sbb$chr1[i] &
+                        dat$pos > (sbb$start1[i] - off1) &
+                        dat$pos < (sbb$end1[i] - off1),]
+      cnv2 <- dat$cnv[dat$chr == sbb$chr2[i] &
+                        dat$pos > (sbb$start2[i] - off2) &
+                        dat$pos < (sbb$end2[i] - off2),]
+      if (nrow(cnv1) < 1 || nrow(cnv2) < 1)
+        next()
+      #Duplication
+      n1 <-
+        apply(cnv1, 2, function(x)
+          sum(x == 1, na.rm = TRUE))
+      l1 <- n1 >= min1
+      if (any(l1)) {
+        n2 <- apply(cnv2, 2, function(x)
+          sum(x == -1, na.rm = TRUE))
+        l2 <- n2 >= min2
+        dif <- abs(n1 - n2) <= maxdiff
+        out[i, l1 & l2 & dif] <- 1
+      }
+      n2 <-
+        apply(cnv2, 2, function(x)
+          sum(x == 1, na.rm = TRUE))
+      l2 <- n2 >= min1
+      if (any(l2)) {
+        n1 <- apply(cnv1, 2, function(x)
+          sum(x == -1, na.rm = TRUE))
+        l1 <- n1 >= min2
+        dif <- abs(n1 - n2) <= maxdiff
+        out[i, l1 & l2 & dif] <- 1
+      }
     }
-    l2 <-
-      apply(cnv2, 2, function(x)
-        sum(x == 1, na.rm = TRUE) >= min)
-    if (any(l2)) {
-      l1 <- apply(cnv1, 2, function(x)
-        sum(x == -1, na.rm = TRUE) >= min)
-      out[i, l1 & l2] <- 1
-    }
+    dat$tl <- out
+    dat
   }
-  dat$tl <- out
-  dat
-}

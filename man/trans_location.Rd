@@ -4,7 +4,7 @@
 \alias{trans_location}
 \title{Find translocations}
 \usage{
-trans_location(dat, sb, min = 1L)
+trans_location(dat, sb, min1 = 1L, min2 = min1, maxdiff = 4L)
 }
 \arguments{
 \item{dat}{List object, containing at least two matrices "baf" and "rratio"
@@ -12,7 +12,12 @@ and two vectors "chr" and "pos".}
 
 \item{sb}{synteny_info object}
 
-\item{min}{Integer, minimal number of markers below / above threshold.}
+\item{min1}{Integer, minimal number of markers below / above threshold in the first genome.}
+
+\item{min2}{Integer, minimal number of markers below / above threshold in the second genome.}
+
+\item{maxdiff}{Integer, maximal difference of marker numbers between corresponding deletion and duplication.
+Avoids false positives in case unique events of unequal size are in synteny by chance.}
 }
 \value{
 norm_data object including a CNA object.
