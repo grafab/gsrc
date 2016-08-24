@@ -86,6 +86,26 @@ find_blocks <-
     if (nrow(blocks) < 1)
       stop("No blocks detected.")
     blocks <- blocks[order(blocks$start1, blocks$start2),]
+    for (i in 1:nrow(blocks)) {
+      cblock <- blocks[i,]
+      m <- max(df$glo1[df$chr1 == cblock$chr1])
+      if (cblock$end1 > m){
+        blocks$end1[i] <- m
+      }
+      m <- max(df$glo2[df$chr2 == cblock$chr2])
+      if (cblock$end2 > m){
+        blocks$end2[i] <- m
+      }
+      m <- min(df$glo1[df$chr1 == cblock$chr1])
+      if (cblock$start1 < m){
+        blocks$start1[i] <- m
+      }
+      m <- min(df$glo1[df$chr2 == cblock$chr2])
+      if (cblock$start2 < m){
+        blocks$start2[i] <- m
+      }
+    }
+
     for (i in unique(blocks$end1)) {
       wb <- which(blocks$end1 == i)
       if (length(wb) > 1) {
