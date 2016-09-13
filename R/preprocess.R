@@ -1,7 +1,7 @@
 #' Preprocess raw values and calculate Intensity and Theta values
 #'
 #' @param raw Raw_data object.
-#' @param norm Method for the normalization. Currently only quantile normalization is implemented.
+#' @param norm Method for the normalization. One of "none", "quantile", "median" or "both".
 #' @param scaling Logical, if each SNP should be scaled or not.
 #' @param transf Method for transformation of the raw values.
 #' "none", "log" and "fourth-root" are implemented.
