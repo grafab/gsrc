@@ -2,7 +2,9 @@
 title: "Introduction to gsrc"
 author: "Fabian Grandke"
 date: "`r Sys.Date()`"
-output: rmarkdown::html_vignette
+output: 
+  rmarkdown::pdf_document:
+    fig_caption: true
 vignette: >
   %\VignetteIndexEntry{Introduction}
   %\VignetteEngine{knitr::rmarkdown}
@@ -11,21 +13,22 @@ vignette: >
 
 #Introduction
 This vignette gives an introduction to the R package _gsrc_.
-It explains the overall workflow and provides details about important steps in
-the pipeline.
+It explains the overall workflow and provides details about important steps in the pipeline to calculate and visualize genomic rearrangements including duplications, deletions and homeologous exchanges in allopolyploid specied.
 The goal is to obtain genotypes, copy number variations (CNVs) and translocations.
-These can be used for association studies later on.
+
 
 We demonstrate the process with our own data (_Brassica napus_) from the package _Brassica_napus_data_.
 Raw data files are too large to be included for all samples.
-We add raw data of two samples for demonstration purpose.
+We add raw data of two samples for demonstration purpose of the first steps.
 The remainder of our data set is included as processed R data.
 
 # Installation
 ```{r, results="hide"}
-library(gsrc)
-require(devtools)
-devtools::install_github("grafab/brassicaData")
+#library(gsrc)
+#require(devtools)
+#devtools::install_github("grafab/brassicaData")
+#devtools::install_github("grafab/gsrc")
+devtools::load_all()
 ```
 
 # Input data
@@ -38,7 +41,7 @@ files <- list.files("/YOUR/DATA/REPOSITORY/",
                     pattern = "idat",full.names = TRUE)
 ```
 We load our example data:
-```{r, eval = TRUE}
+```{r, eval = FALSE}
 files <- list.files(system.file("extdata",
                                 package = "brassicaData"),
                     full.names = TRUE, 
@@ -47,47 +50,107 @@ files <- list.files(system.file("extdata",
 
 ## Sample names
 idat files usually have cryptic names.
-In order to get the easier to interpret sample names we need to read in the
+In order to assign "understandable" sample names we need to read in the
 sample sheets with `read_sample_sheets`.
-```{r, eval = TRUE}
+```{r, eval = FALSE}
 samples <- read_sample_sheets(files = 
                                 list.files(system.file("extdata",package = "brassicaData"),
                                            full.names = TRUE, 
                                            pattern = "csv"))
 ```
 
-Users might want to remove all control samples (e.g. H2O) and update `files`.
+Users might want to remove all control samples (e.g. H2O) and update the vector of file names `files` from a real dataset.
 For instance:
-```{r, eval = TRUE}  
+```{r, eval = FALSE}  
 controls <- grep("H2O", samples$Names)
 if(length(controls) > 0) samples <- samples[-controls, ]
 files <- grep(paste(samples$ID, collapse = "|"), files, value = TRUE)
 ```
+The example sample sheet in _brassicaData_ does not include any control samples.
 
-`files` contains the full path names of the idat files.
-We trim them to the actual file name and use it as columns names for our raw 
-data file.
+`files` contains the full path names of the remaining idat files.
+We trim the paths to the actual file name and use it as columns names for our raw data file.
 For Unix file systems this can be done like this:
-```{r, eval = TRUE}  
+```{r, eval = FALSE}  
 column_names <- sapply(strsplit(files, split = "/"), FUN=function(x) x[length(x)])
 ```
 
 ## SNP names and positions
-Next we load `dictionary` and `chrPos`. 
+SNP identifiers provided by the manufracturers are ofter cryptic and not reasonable.
+Therefore we transform them into meaningful names.
 `dictionary` is an R object to translate the cryptic SNP identifiers in the 
-idat files to meaningful SNP names.
-`chrPos` provides chromosome and position information for the SNPs.
+idat files to meaningful SNP names for the example dataset.
+
+Further we need positional information about each SNP to locate it on the genome.
+`chrPos` provides chromosome and position information for the SNPs in the example dataset.
 We provide multiple files, because there are different ways to locate the SNPs on the genomes.
+For other arrays these positions can be obtained by blasting the SNP sequences onto the reference sequence and filtering out SNPs which have multiple or low scoring hits.
 
 ```{r}  
 data(dictionary, package = "brassicaData", envir = environment())
+head(dictionary)
 data(chrPos, package = "brassicaData", envir = environment())
+head(chrPos)
 ```
-It is advantagous to load the position before the data.
-SNPs with unknown positions are usually not of interest and can be skipped
-from the analysis.
-The earlier they are removed, the more computational time and memory is 
-saved.
+It is advantagous to load the positional information before the raw data because SNPs with unknown positions are usually not of interest and should be skipped from the analysis to reduce computational time and save memory.
+
+
+
+# Read in idat files
+The raw data will be read using the command `read_internsities` creating a new object `raw_data`.
+`read_internsities` is a wrapper to the `readIDAT` function from [_illuminaio_](http://bioconductor.org/packages/release/bioc/html/illuminaio.html).
+```{r, eval = FALSE}
+raw_data <- read_intensities(files = files, 
+                             dict = dictionary, 
+                             cnames = column_names, 
+                             pos = chrPos)
+```
+
+Inspection shows that it is a list of the information we provided (e.g. positions and chromosomes) and the raw data values from the idat files.
+Further, we see the number of SNPs and samples.
+```{r, eval = FALSE}
+str(raw_data)
+```
+
+We rename the samples to get meaningful names and improve interpretability of the data.
+```{r, eval = FALSE}
+raw_data <- rename_samples(raw_data, 
+                           samples = samples[,2:1], 
+                           suffix = c("_Grn", "_Red"))
+```
+
+We set up a raw data object including 304 samples of our dataset, which can be loaded from the _brassicaData_ package.
+```{r}
+data(raw_napus, package = "brassicaData", envir = environment())
+```
+
+# Preprocessing
+Now that we read in the raw data it is time that we combine the green and red signal for each sample.
+
+## Quality control
+We check the quality of our data and remove failed samples or SNPs.
+Signal intensities are a good indicators if genotyping of a sample failed.
+Similarly, we can use the number of beads and standard deviations to detect erroneous SNPs.
+We did not include the latter ones in our example dataset because it would triple the required memory.
+However, the command `filt_snps` provides the required functionality.
+
+### Signal intensities
+We have a look at the raw data values.
+The histogram shows the mean red and green values for each sample.
+Outliers on the left side might should be inspected and probably filtered out.
+The threshold returns the indices of the green and red value for the sample below the threshold.
+```{r, fig.show = "hold", fig.width = 10, fig.height = 10, fig.cap = "Raw Data Histogram"}
+check_raw(raw_napus, thresh = 28000, breaks = 20)
+```
+
+On the right of our threshold in Figure 1 are "normal" samples. 
+The samples on the left side to it have a overall reduced mean signal intensity, indicating low quality (e.g. sample preparation, labelling or hybridization failed).
+To filter them out we use the `filt_samp` command:
+```{r, eval = TRUE}
+length(raw_napus$samples)
+raw_napus <- filt_samp(raw_napus, check_raw(raw = raw_napus, plot = FALSE, thresh = 28000))
+length(raw_napus$samples)
+```
 
 ### Number of beads
 One indicator for data quality is the number of beads.
@@ -95,77 +158,31 @@ The number of beads is included in the idat file and describes how many beads pe
 In our data sets we see that the number of beads follows a bell-shaped distribution.
 Signals with a low number of beads (e.g. < 5) can be filtered out to increase the confidence of the value.
 
+
 ### Standard deviation
 Similar to the filtering of the bead number, we can filter out signals based on the standard deviation.
 A high standard deviation indicates doubtful results.
-
 If a signal falls below a threshold it should be set to NA.
 If a SNP does not work in multiple samples, it should be filtered out entirely.
 
-# Read in raw data
-`read_internsities` ia a wrapper to the `readIDAT` function from [_illuminaio_](http://bioconductor.org/packages/release/bioc/html/illuminaio.html).
-```{r, eval = TRUE}
-raw_data <- read_intensities(files = files, 
-                             dict = dictionary, 
-                             cnames = column_names, 
-                             pos = chrPos)
-```
-
-We read in the idat files and got a new object `raw_data`.
-Inspection shows that it is a list of the information we provided (e.g. positions and chromosomes) and the raw data values from the idat files.
-Further, we see the number of SNPs and samples.
-```{r, eval = TRUE}
-str(raw_data)
-```
-
-We rename the samples to get meaningful names and improve interpretability of the data.
-```{r, eval = TRUE}
-raw_data <- rename_samples(raw_data, 
-                           samples = samples[,2:1], 
-                           suffix = c("_Grn", "_Red"))
-```
-
-These steps have been applied to our full data set.
-To load the full data set use `data`:
-```{r}
-data(raw_napus, package = "brassicaData", envir = environment())
-```
-
-
-We have a look at the raw data values.
-The histogram shows the combined red and green values for each sample.
-Outliers on the left side might should be inspected and probably filtered out.
-The threshold returns the indices of the green and red value for the sample below the threshold.
-```{r, fig.show = "hold", fig.width = 10, fig.height = 10}
-check_raw(raw_napus, thresh = 28000, breaks = 20)
-```
-
-On the right of our threshold we see "normal" samples. 
-The samples left to it have a reduced mean signal.
-They could have many deletions (e.g. resynthesized samples) or the sample preparation went wrong.
-In any case we want to filter them out.
-To remove them, we use `filt_samp`:
-```{r, eval = TRUE}
-length(raw_napus$samples)
-raw_napus <- filt_samp(raw_napus, check_raw(raw = raw_napus, plot = FALSE, thresh = 28000))
-length(raw_napus$samples)
-```
-
-# Preprocess data
-Now that we read in the raw data it is time that we combine the green and red signal for each sample.
 
 ## Normalization
-The intensities are quite different for the two channels.
+Microarray data usually show biased data due to technical errors.
+These biases can affect either the intensities of the individual colors or the overall intensity of the individual average (compare Figure 1).
+Detection of CNV need to quantify and compare the signal intensities within the array and between arrays.
+Therefore normalization of the data might be neccessary.
+We would expect similar distributions of both channels and use boxplots to visualize them.
 
-```{r, eval = TRUE, fig.show = "hold", fig.width = 10, fig.height = 10}
+```{r, eval = TRUE, fig.show = "hold", fig.width = 10, fig.height = 10, fig.cap = "Boxplot comparing green and red signal distibutions"}
 boxplot(as.vector(raw_napus$raw[, seq(1, length(raw_napus$samples), 2)]),
         as.vector(raw_napus$raw[, seq(2, length(raw_napus$samples), 2)]),
         names = c("Green", "Red"))
 ```
-Boxplot comparing green and red signal distributions. Green values are generally lower because the chemical reagents behave differently.
 
-In the `check_raw` plot we saw, that there is also a difference between the samples.
-We account for both effect by normalization.
+Figure 2 shows that the intensities are quite different for the two channels.
+In our data set green values are lower than red values.
+In the output of the `check_raw` command we saw, that there is also a difference between the samples.
+A normalization is neccessary, as we expect all samples to have an overall similar signal intensity within and between samples.
 We provide four strategies:
 
 *  No normalization (not recommended)
@@ -173,23 +190,20 @@ We provide four strategies:
 *  Mean normalization
 *  Combination of mean and quantile normalization
 
-The latter one makes a quantiles normalization between the red and green signal _within_ each sample and then a mean normalization _between_ all samples.
-This is recommended if you have "strange" samples (e.g. resynthesized samples) where you expect many deletions.
-They often have a different signal distribution and should not be quantile normalized with "normal" samples.
-We recommend to use as many samples as possible for the normalization.
-Best choice is a diversity set, because crossing populations are biased.
+The latter one runs a quantiles normalization between the red and green signal intensities _within_ each sample followed by a mean normalization _between_ all samples.
+Best choice is to include a high number of samples of a diversity set, because crossing populations are biased.
 
 
 ## Transformation
 
 The raw signals are heteroscedastic and a transformation is recommended.
-Again multiple ways are implemented:
+Again multiple ways are implemented ([Gidskehaug et al](http://bioinformatics.oxfordjournals.org/content/27/3/303.long) provide an illustrative comparison):
 
 * No tranformation (not recommended)
 * Log transformation (default)
 * Fourth root transformation
 
-[Gidskehaug et al](http://bioinformatics.oxfordjournals.org/content/27/3/303.long) provide an illustrative comparison.
+
 
 ## Scaling
 Each SNP behaves differently on a chip and we recommend scaling of each SNP.
@@ -197,29 +211,31 @@ Here we provide three ways:
 
 * No scaling
 * [Standardizing](https://en.wikipedia.org/wiki/Standard_score)
-* Mean scaling
+* Mean scaling (default)
 
 The latter one subtracts for each SNP the difference between the SNP mean ${\mu}_{i}$ and the mean of all signals $\overline{\mu}$:
-$${{S}_{i,j}} = {R_{i,j}} - {{{\mu}_{i}} - {\overline{\mu}}}$$
+$${{S}_{i,j}} = {R_{i,j}} - ({{{\mu}_{i}} - {\overline{\mu}}})$$
 
 Where ${R_{i,j}}$ and ${{S}_{i,j}}$ are the raw and scaled values, respectively.
+We use the constant $\overline{\mu}$ to prevent values below zero and keep them in a reasonable magnitude.
 
-## Combine green and red signal
 Green and red signals measure for one of two alleles (e.g. A or T).
-In order to get genotypes and CNVs we need to combine both signals.
+In order to call genotypes and CNVs we need the overall signal intensity of the red and green channel combined.
 
 ### Theta
-Genotype information is described by the difference between the signals ($\theta$).
-High red and low green signal would indicate a homozygous "red genotype" and vice versa.
-Similar signals indicate heterozygous genotypes.
-There are different ways to calculate this $\theta$.
-We use the [atan2](https://en.wikipedia.org/wiki/Atan2) method and divide by $\frac{\pi}{2}$.
-
+Genotype information is described by the difference between the signal intensities ($\theta$).
+High red and low green signal intensities would indicate a homozygous "red genotype" and vice versa.
+Similar signal intensity strengths indicate heterozygous genotypes.
+There are different ways to calculate the signal intensity difference $\theta$.
+We use 
+$$\theta = \dfrac{atan2(y,x) \times 2 }{\pi}$$
+where x and y are the green and red values, respectively.
 
 ### Intensity
 The signal intensity provides information about the signal strength for a SNP.
-Low  and high values indicate deletions and duplications, respectively.
-We use a Minkowski distance to calculate intensity values from the two signals.
+Low values indicate deletions and high values duplications.
+We use the p-norm to calculate intensity values from the two signals x and y (default $p=2$):
+$$ (x^p + y^p)^\frac{1}{p}$$
 
 
 ```{r, eval = TRUE}
@@ -227,9 +243,10 @@ norm_dat <- intens_theta(raw_napus, norm = "both", scaling = "mean", transf = "l
 str(norm_dat)
 ```
 
-`norm_dat` contains sample, SNP and location information as the raw data file.
-In addition two matrices `intensity` and `theta` have been added.
-By default the sample names have a suffix, which we can remove because it is not informative.
+The object `norm_dat` contains the sample, SNP and location information from the raw data file.
+In addition the two matrices `intensity` and `theta` have been added containing the described intensity and theta values.
+
+By default the sample names have a suffix, which should be remove because it is not informative.
 ```{r, eval = TRUE}
 head(norm_dat$samples)
 norm_dat <- remove_suffix(norm_dat, "_Grn")
@@ -237,36 +254,43 @@ head(norm_dat$samples)
 ```
 
 ## Data check
-We want to have a look at the data to make sure the transformation went well.
-```{r, eval = TRUE, fig.show = "hold", fig.width = 10, fig.height = 10}
+We want to have a look at the data to see the outcome of the transformation.
+
+```{r, eval = TRUE, fig.show = "hold", fig.width = 10, fig.height = 10, fig.cap="Intensity histogram"}
 hist(norm_dat$intensity, breaks = 1000)
-hist(norm_dat$theta, breaks = 1000)
 ```
 
-We expect to see three peaks in the theta plot, one for the heterozygous and two for homozygous SNPs.
-The distribution in the intensity plot is dependend on the population.
+The distribution in Figure 3 is dependend on the population.
 Usually, we see on large peak representing the "normal" signal intensity.
 Values or even peaks on the left indicate deletions.
 A minimum region between two peaks indicates a reasonable threshold for deletions.
 
-We are satisfied with our data and can move on with processing.
+```{r, eval = TRUE, fig.show = "hold", fig.width = 10, fig.height = 10, fig.cap="Theta histogram"}
+hist(norm_dat$theta, breaks = 1000)
+```
+
+We expect to see three peaks in Figure 4, one for the heterozygous and two for homozygous SNPs.
+
+e are satisfied with our data and can move on with processing.
 The raw data is not longer required and we can free some memory:
 ```{r, eval = FALSE}
 rm(raw_napus)
 ```
 
 # Data Processing
-Theta and intensity values give a rough idea about genotypes and copy numbers.
-We can refine this by calling genotypes.
-Afterwards we are able to calculate __B-Allele frequencies__ and __Log R ratios__.
+Based on the theta and intensity values calculate __B-Allele frequencies__ and __Log R ratios__.
 
 ## Genotype calling
 We use a one dimensional k-means clustering from [Ckmeans.1d.dp](http://cran.r-project.org/package=Ckmeans.1d.dp) for the genotype calling.
-We treat every SNP as diploid and use a maximum of three clusters.
+We treat each SNP as diploid and allow a maximum of three clusters.
 
 ## B-Allele frequency and Log R ratio
-Based on the genotypes, we calculate B-Allele frequency and Log R ratio as described by [Pfeiffer et al](http://www.ncbi.nlm.nih.gov/pmc/articles/PMC1557768/).
-
+Based on the genotype calls, we calculate B-Allele frequency and Log R ratio as described by [Peiffer et al (2006)](http://www.ncbi.nlm.nih.gov/pmc/articles/PMC1557768/).
+B-Allele frequency values are noise reduced versions of the theta value we calculated before.
+Similarly, the Log R ratio is a corrected version of the intensity value.
+Both use the cluster means of the genotyping step to correct the values for each SNP individually. 
+We apply a deletion threshold of 11 to remove lower values from the calculation.
+The threshold was obtained from the intensity histogram.
 
 ```{r, eval = TRUE}
 norm_dat <- geno_baf_rratio(norm_dat, delthresh = 11)
@@ -283,84 +307,109 @@ We see three new matrices in `norm_dat`:
     Log R ratio values.
     
 Again we have a look at the data:
-```{r, eval = TRUE, fig.show = "hold", fig.width = 10, fig.height = 10}
+
+```{r, eval = TRUE, fig.show = "hold", fig.width = 10, fig.height = 10, fig.cap="B-allele frequency histogram"}
 hist(norm_dat$baf, breaks = 1000)
+```
+
+The large peaks on the left and right side of Figure 5 indicate that most values are homozygous. The little bump at 0.5 indicates a small proportion of heterozygous SNPs.
+
+```{r, eval = TRUE, fig.show = "hold", fig.width = 10, fig.height = 10, fig.cap="Barplot of genotypes"}
 tmp <- table(norm_dat$geno, useNA = "ifany")
 barplot(tmp, names.arg = c(names(tmp)[1:4], "NA"))
+```
+
+The right bar in Figure 6 shows missing values (genotypes that could not be called).
+-1 indicates deletions.
+0, 1 and 2 are the three diploid genotypes AA, AB and BB, respectively.
+
+```{r, eval = TRUE, fig.show = "hold", fig.width = 10, fig.height = 10, fig.cap="Log R ratio histogram"}
 hist(norm_dat$rratio, breaks = 1000)
 ```
-The large peaks on the left and right side of the BAF plot indicate that most values are homozygous. The little bump at 0.5 indicates a small proportion of heterozygous SNPs.
-The right bar in the barplot shows missing values (genotypes that could not be called.)
-The large peak in the R ratio plot indicates that most SNPs are neither deleted nor duplicated.
 
-We are satisfied with our B-Allele frequencies and Log R ratios.
-Hence, we do remove theta and intensity values to free some memory.
+The large peak in Figure 7 indicates that most SNPs are neither deleted nor duplicated.
+These would be indicated by smaller peaks on the left or right.
+
+We remove theta and intensity values to free some memory, but we keep the B-allele frequency and Log R ratios.
 ```{r, eval = TRUE}
 norm_dat$theta <- norm_dat$intensities <- NULL
 ```
 
-We filter out SNPs that could not be genotyped properly.
+We filter out SNPs that could not be genotyped properly, because they did not show the expected segregation patterns or had too many values below the deletion threshold.
 ```{r, eval = TRUE}
 length(norm_dat$snps)
 norm_dat <- filt_snps(norm_dat, norm_dat$snps[is.na(rowMeans(norm_dat$baf, na.rm = TRUE))])
 length(norm_dat$snps)
 ```
 
-## Segmentation
-In order to call CNVs we first separate each chromosome into blocks.
+## Segmentation and CNV calling
+CNVs are called chromsomes-wise by segmentation of the data into continuous blocks with similar Log R ratios.
 We provide a wrapper to methods from the R package [_DNAcopy_](http://bioconductor.org/packages/release/bioc/html/DNAcopy.html).
-`segm` segments the data into continuous blocks of similar Log R ratio.
+The function `segm` segments the data into continuous blocks of similar Log R ratio.
+The segments allow us to screen for CNV regions where multiple SNPs show the same pattern.
+It is resistant to individual SNPs with high or low Log R ratios and treats them as noise.
 We separate this step from the CNV calling because it is computationally expensive.
 That way we can call CNVs with varying thresholds without repeating the segmentation step.
 ```{r, eval = TRUE}
 norm_dat <- segm(norm_dat)
 str(norm_dat)
 ```
-Now, `norm_dat` has a cna object. It contains all segments for all samples.
-To call CNVs we use `cnv`:
+The cna object `norm_dat` contains all segments of similar Log R ratios for all samples.
+To call CNVs we use the function `cnv`, with duplication and deletion thresholds of 0.03 and -0.06, as indicated by the Log R ratio histogram.
+`cnv` assigns segments as deletion, duplication or unchanged.
 ```{r, eval = TRUE}
 norm_dat <- cnv(norm_dat, dup = 0.03, del = -0.06)
 str(norm_dat)
 ```
-We added a `cnv` object to `norm_dat`. It contains the CNV calls for all SNPs and samples.
-```{r, eval = TRUE, fig.show = "hold", fig.width = 10, fig.height = 10}
+We added a `cnv` object to `norm_dat`, which contains the CNV calls for all SNPs and samples.
+A CNV call is a block of SNPs where most SNPs are above or below a individually defined threshold.
+
+```{r, eval = TRUE, fig.show = "hold", fig.width = 10, fig.height = 10, fig.cap="Barplot of CNVs"}
 barplot(table(norm_dat$cnv))
 ```
--1, 0 and 1 are deletions, normal calls and duplications, respectively.
 
-## Translocations
+-1, 0 and 1 in Figure 8 are deletions, normal calls (no CNV aberrations) and duplications, respectively.
+
+## Translocations / homeologous exchanges
 We can call translocation from the CNV data.
+For each sample we screen all synteny blocks for reciprocal translocations, i.e. if there are duplications on one side of the synteny block and a deletion on the other.
+Using the parameters we can specify the minimum number of SNPs in each event, individually.
+Further, we can set a maximal difference of SNPs between reciproval events to avoid erroneous translocation calls by independent events, which are in the same synteny block by chance.
 We require at least 5 SNPs to be duplicated/deleted to increase the quality of our prediction.
-We create a synteny block object, as explained in the synteny block vignette.
+We create a synteny block object from either mapped genes or reference sequences, as explained in the synteny block vignette.
 ```{r, eval = TRUE}
 data(synteny_blocks, package = "brassicaData", envir = environment())
 ```
 
 ```{r, eval = TRUE}
-norm_dat <- trans_location(norm_dat, synteny_blocks, min = 5)
+norm_dat <- trans_location(norm_dat, synteny_blocks, min1 = 5, min2 = 5, maxdiff = 10)
 ```
 
-# Plot results
+# Visualization of the results
 We completed all necessary data processing steps.
-
 Now, we look at our results:
-```{r, eval = TRUE, fig.show = "hold", fig.width = 10, fig.height = 10}
+
+```{r, eval = TRUE, fig.show = "hold", fig.width = 10, fig.height = 10, fig.cap="Genome structure rearrangements within one sample"}
 plot_gsr(norm_dat, sb = synteny_blocks, samp = 1)
 ```
-Log R ratios of A and C chromosomes are plotted on top and bottom, respectively. Grey, Red and Green, indicate normal, deleted and duplicated SNPs. In between are synteny blocks indicating homeology between the two subgenomes. The colors correspond to the A genomes.
 
-We can add the B-Allele frequency and translocations:
-```{r, eval = TRUE, fig.show = "hold", fig.width = 10, fig.height = 10}
+Log R ratios of A and C chromosomes are plotted on top and bottom of Figure 9, respectively. Grey, Red and Green, indicate normal, deleted and duplicated SNPs. In between are synteny blocks indicating homeology between the two subgenomes. The colors correspond to the synteny block location in the A genomes.
+
+We can add the B-Allele frequency and translocations, setting the options `baf` and `tl` to TRUE.
+
+```{r, eval = TRUE, fig.show = "hold", fig.width = 10, fig.height = 10, fig.cap="Genome structure rearrangements within one sample, inluding B-allele frequencies and translocations"}
 plot_gsr(norm_dat, sb = synteny_blocks, samp = 1, baf = TRUE, tl =TRUE)
 ```
-Same plot as before, but with B-Allele frequencies and translocations.
 
+Figure 10 shows the same plot as before, but with B-Allele frequencies included and translocations highlighted.
 
 In addition to individual samples, we can plot the whole mean values for the whole dataset.
 It allows us to find deletion and duplication hotspots.
-```{r, eval = TRUE, fig.show = "hold", fig.width = 10, fig.height = 10}
+
+```{r, eval = TRUE, fig.show = "hold", fig.width = 10, fig.height = 10, fig.cap="Mean B-alllele frequencies and Log R rations of the population"}
 plot_global(norm_dat, sb = synteny_blocks)
 ```
-Global plot with mean values of all samples.
+
+Figure 11 shows the global plot with mean values of all samples.
 
 
