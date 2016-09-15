@@ -1,0 +1,374 @@
+---
+title: "Synteny Block Calculation"
+author: "Fabian Grandke"
+date: "`r Sys.Date()`"
+output: rmarkdown::pdf_document
+vignette: >
+  %\VignetteIndexEntry{Synteny Block Calculation}
+  %\VignetteEngine{knitr::rmarkdown}
+  %\VignetteEncoding{UTF-8}
+---
+
+#Introduction
+Detection of homeologous translocations require to know which SNPs belong to corresponding homeologous regions.
+In this manual we describe two different methods how to match homeologous regions between subgenomes and create synteny blocks.
+First we use publicly available data from already mapped gene sequences.
+Secondly, we create synteny blocks from genome sequences (fasta format) of corresponding subgenomes using the _DECIPHER_ package.
+
+
+We require some packages to be installed:
+```{r, results="hide"}
+library(openxlsx)
+library(dbscan)
+library(gsrc)
+```
+#Synteny blocks from mapped gene sequences
+[Bancroft et al. (2015)](http://www.sciencedirect.com/science/article/pii/S2352340915000062) mapped gene sequences to the A and C subgenome of allotetraploid Brassica napus to match homeologous regions.
+We download the supplementary files 6 and 7:
+```{r}
+tf1 <- tempfile()
+url1 <- paste("http://www.sciencedirect.com/science/MiamiMultiMediaURL/",
+              "1-s2.0-S2352340915000062/1-s2.0-S2352340915000062-mmc6.xlsx/",
+              "311593/html/S2352340915000062/5528a88e468e01866744f28fc42139c6/",
+              "mmc6.xlsx", sep = "")
+utils::download.file(url = url1, destfile = tf1, method = "internal", mode = "wb")
+synA <- openxlsx::read.xlsx(tf1)
+url2 <- paste("http://www.sciencedirect.com/science/MiamiMultiMediaURL/",
+              "1-s2.0-S2352340915000062/1-s2.0-S2352340915000062-mmc7.xlsx/",
+              "311593/html/S2352340915000062/d616ded5ee9399d4fe29df72435780c9/",
+              "mmc7.xlsx", sep = "")
+utils::download.file(url = url2, destfile = tf1, method = "internal", mode = "wb")
+synC <- openxlsx::read.xlsx(tf1)
+unlink(tf1)
+```
+
+
+##Filter data
+The data set consists of two tabled of genes that have been mapped to the A and C genomes.
+Some genes could only be mapped to one of them and we want to filter these out.
+```{r}
+synA <- synA[synA$unigene %in% synC$unigene, ]
+synC <- synC[synC$unigene %in% synA$unigene, ]
+```
+
+Additionally, we filter data entries, which do not have a unigene identifier.
+```{r}
+synA <- synA[!is.na(synA$unigene),]
+synC <- synC[!is.na(synC$unigene),]
+```
+
+We drop some unused columns.
+```{r}
+synA <- synA[, c(2,5,6,7)]
+synC <- synC[, c(2,5,6,7)]
+```
+
+##Merge data sets
+Now, we merge the two tables with genes mapped to the A and C subgenome.
+```{r}
+syn_uni <- merge(synA, synC, by = "unigene")
+syn_uni <- syn_uni[order(syn_uni$A.Chr, syn_uni$A.start),]
+```
+
+We create four columns from the existing data and add them to the dataset.
+```{r}
+syn_uni$Alev <- as.factor(syn_uni$A.Chr)
+syn_uni$Clev <- as.factor(syn_uni$C.Chr)
+syn_uni$AGlo <- syn_uni$A.start
+syn_uni$CGlo <- syn_uni$C.start
+```
+
+## Calculate overall genomic positions
+We use the positions of the genes to calculate the chromosome lengths.
+They are added to the positions to calculate global positions.
+For instance, if chromosome A1 is 3,000,000 bp long,  position 150,000 on chromosome A2 becomes 3,150,000 globally.
+Global positions are required for plotting all SNPs together on a row.
+```{r}
+amaxs <- sapply(levels(syn_uni$Alev), function(x) max(syn_uni$A.start[syn_uni$A.Chr==x]))
+for(i in 2:length(levels(syn_uni$Alev))){
+  syn_uni$AGlo[syn_uni$A.Chr == levels(syn_uni$Alev)[i]] <- syn_uni$AGlo[syn_uni$A.Chr == levels(syn_uni$Alev)[i]] + sum(amaxs[1:(i-1)])
+}
+```
+We repeat the same for the C chromosome.
+```{r}
+cmaxs <- sapply(levels(syn_uni$Clev), function(x) max(syn_uni$C.start[syn_uni$C.Chr==x]))
+for(i in 2:length(levels(syn_uni$Clev))){
+  syn_uni$CGlo[syn_uni$C.Chr == levels(syn_uni$Clev)[i]] <- syn_uni$CGlo[syn_uni$C.Chr == levels(syn_uni$Clev)[i]] + sum(cmaxs[1:(i-1)])
+}
+```
+
+Now, we can caluclate the chromosome ends.
+```{r}
+csamax <- cumsum(amaxs)
+cscmax <- cumsum(cmaxs)
+```
+
+We visualize the positions:
+```{r, fig.show = "hold", fig.width = 10, fig.height = 10}
+plot(syn_uni$AGlo, syn_uni$CGlo, pch = 19,cex=0.2, col = rgb(0,0,0,alpha = 0.05))
+abline(v = c(0, csamax), h=c(0, cscmax))
+```
+
+
+We apply the function `find_blocks` to our dataset.
+```{r}
+syn_uni2 <- syn_uni[, c(2, 3, 5, 6)]
+names(syn_uni2) <- c("chr1", "pos1", "chr2", "pos2")
+synteny_blocks <- find_blocks(syn_uni2, eps = 2000000, minPts = 50,
+                              minLength = 1000000, maxLength = 10000000)
+```
+
+Lastly, we add an offset to the data.frame.
+```{r}
+synteny_blocks$blocks$off1 <- c(0,cumsum(amaxs))[match(synteny_blocks$blocks$chr1, names(amaxs))]
+synteny_blocks$blocks$off2 <- c(0,cumsum(cmaxs))[match(synteny_blocks$blocks$chr2, names(cmaxs))]
+```
+
+We created a synteny block object that can be used in the _gsrc_ package.
+We can visualize synteny blocks as follows:
+```{r, fig.show = "hold", fig.width = 10, fig.height = 5}
+plot.new()
+cols <- rainbow(n = 10, start = 0, end = 1, alpha = 0.2)
+max1 <- max(synteny_blocks$blocks$end1) 
+max2 <- max(synteny_blocks$blocks$end2) 
+axis(3, at = (csamax - min(amaxs) / 2) / max(csamax), 
+     labels = unique(synA$A.Chr), tick = FALSE, cex.axis = 0.8, las = 1)
+axis(1, at = (cscmax - min(cmaxs) / 2) / max(cscmax), labels = unique(synC$C.Chr), tick = FALSE, cex.axis = 0.8, las = 1)
+y <- c(1, 1, 0, 0)
+for(i in 1:nrow(synteny_blocks$blocks)){
+  x <- c(synteny_blocks$blocks$start1[i], 
+         synteny_blocks$blocks$end1[i], 
+         synteny_blocks$blocks$end2[i], 
+         synteny_blocks$blocks$start2[i])
+  x <- c(x[1:2] / max1, x[3:4] / max2)
+  polygon(x, y, col = cols[unique(synteny_blocks$blocks$chr1) %in% synteny_blocks$blocks$chr1[i]])
+}
+
+```
+
+#Synteny blocks form fasta sequences
+Here we require only two sequence files in FASTA format and make use of the powerful _DECIPHER_ package.
+The sequences can be from closely related species or subgenomes of allopolyploids.
+We show the step by step procedure with publicly available data from allotetraploid canola and cotton.
+
+##Canola
+First we download the canola data from:
+[http://www.genoscope.cns.fr/brassicanapus/data/](http://www.genoscope.cns.fr/brassicanapus/data/Brassica_napus_v4.1.chromosomes.fa.gz) and extract it into a local directory.
+Next we split the file in the A (line 3977960) and C subgenome (line 10756668) in two separate files.
+Subgenomes A and C consist of 10 and 9 chromosomes, respectively.
+
+```{r, results="hide", eval=FALSE}
+library(DECIPHER)
+library(dbscan)
+library(gsrc)
+```
+
+###DECIPHER
+To calculate synteny positions, we apply the code provided by the DECIPHER authors  [(http://decipher.cee.wisc.edu)](http://decipher.cee.wisc.edu/Screenshots/Example6.html).
+The computation is time consuming and if you have access to a multi-core system, you should assign multiple cores using the _processors_ parameter and increase the memory with the _storage_ parameter.
+_PATHTOSUBGENOMEA_ and _PATHTOSUBGENOMEB_ are the files we just created by splitting the downloaded FASTA file.
+_PATHTODB_ and _PATHTOSYNTENYFILE_ are files that DECIPHER will create to query the sequences and write the output, respectively.
+```{r, eval = FALSE}
+fas <- c(Genome1="PATHTOSUBGENOMEA",   
+         Genome2="PATHTOSUBGENOMEB")
+db <- "PATHTODB"
+for (i in seq_along(fas)) {   
+  Seqs2DB(fas[i], "FASTA", db, names(fas[i]))
+}
+synteny <- FindSynteny(db, processors = NULL, storage = 5)
+save(synteny, file = "PATHTOSYNTENYFILE")
+```
+
+###Synteny blocks
+Next, we calculate synteny blocks from the mapped sequences.
+We extract the required data from the synteny object, filter, transform and calculate global positions.
+The function _FindSynteny_ returns a list of alignment result objects, but we only need the second object.
+
+```{r, results = "hide"}
+load("/home/fabian/jlu/indel/synteny/brassica_synteny.Rdata")
+```
+```{r}
+syn_uni <- as.data.frame(synteny[[2]])
+syn_uni <- syn_uni[syn_uni$score>1500,]
+syn_uni <- syn_uni[, c(1,5,7,2,6,8)]
+syn_uni <- cbind(syn_uni, rowMeans(syn_uni[, 2:3]), rowMeans(syn_uni[, 5:6]))
+syn_uni <- syn_uni[, c(1,7,4,8)]
+colnames(syn_uni) <- c("index1", "start1", "index2", "start2")
+syn_uni <- syn_uni[order(syn_uni$index1, syn_uni$start1),]
+syn_uni$Alev <- as.factor(syn_uni$index1)
+syn_uni$Clev <- as.factor(syn_uni$index2)
+syn_uni$AGlo <- syn_uni$start1
+syn_uni$CGlo <- syn_uni$start2
+amaxs <- sapply(levels(syn_uni$Alev), function(x) max(syn_uni$start1[syn_uni$index1==x]))
+for(i in 2:length(levels(syn_uni$Alev))){
+  syn_uni$AGlo[syn_uni$index1 == levels(syn_uni$Alev)[i]] <- syn_uni$AGlo[syn_uni$index1 == levels(syn_uni$Alev)[i]] + sum(amaxs[1:(i-1)])
+}
+
+cmaxs <- sapply(levels(syn_uni$Clev), function(x) max(syn_uni$start2[syn_uni$index2==x]))
+for(i in 2:length(levels(syn_uni$Clev))){
+  syn_uni$CGlo[syn_uni$index2 == levels(syn_uni$Clev)[i]] <- syn_uni$CGlo[syn_uni$index2 == levels(syn_uni$Clev)[i]] + sum(cmaxs[1:(i-1)])
+}
+csamax <- cumsum(amaxs)
+cscmax <- cumsum(cmaxs)
+
+```
+We visualize the data and see a general synteny structure in the data.
+```{r, fig.show = "hold", fig.width = 8, fig.height = 8}
+plot(syn_uni$AGlo, syn_uni$CGlo, pch = 19, cex = 0.2, col = rgb(0, 0, 0, alpha = 0.05))
+abline(v = c(0, csamax), h=c(0, cscmax))
+```
+We extract the columns with corresponding alignments and name them.
+```{r}
+syn_uni2 <- syn_uni[, c(1, 2, 3, 4)]
+names(syn_uni2) <- c("chr1", "pos1", "chr2", "pos2")
+```
+
+Once, we have a suitable data.frame with four columns, we call the function _find_blocks_ to group the separate alignments into larger synteny blocks.
+```{r}
+blocks <- gsrc::find_blocks(syn_uni2, eps = 1500000, minPts = 20, minLength = 1000000, maxLength = 10000000)
+```
+
+Finally, we visualize the result.
+The chromsome numbers do not necessarily represent the official chromosome names, but the order of the sequences in the FASTA file.
+The start and end positions of synteny blocks are used by _gsrc_ to assign SNPs to them.
+```{r, fig.show = "hold", fig.width = 9, fig.height = 5}
+plot.new()
+cols <- rainbow(
+  n = 10, start = 0, end = 1, alpha = 0.2
+)
+max1 <- max(blocks$blocks$end1)
+max2 <- max(blocks$blocks$end2)
+axis(
+  3, at = (csamax - min(amaxs) / 2) / max(csamax),
+  labels = sort(unique(blocks$blocks$chr1)), tick = FALSE, cex.axis = 0.8, las = 1
+)
+axis(
+  1, at = (cscmax - min(cmaxs) / 2) / max(cscmax),
+  labels = sort(unique(blocks$blocks$chr2)), tick = FALSE, cex.axis = 0.8, las = 1
+)
+y <- c(1, 1, 0, 0)
+for (i in 1:nrow(blocks$blocks)) {
+  x <- c(
+    blocks$blocks$start1[i],
+    blocks$blocks$end1[i],
+    blocks$blocks$end2[i],
+    blocks$blocks$start2[i]
+  )
+  x <- c(x[1:2] / max1, x[3:4] / max2)
+  polygon(x, y, col = cols[unique(blocks$blocks$chr1) %in% blocks$blocks$chr1[i]])
+}
+```
+
+The synteny block structure is highly similar to the one we obtained with the mapped gene sequences.
+
+##Cotton
+We repeat the previously shown steps with data from a cotton project to show the that our approach is not limited to one species. 
+First we download the data from  [https://www.cottongen.org/data/download/genome](ftp://ftp.bioinfo.wsu.edu/species/Gossypium_hirsutum/NAU-NBI_G.hirsutum_AD1genome/assembly/AD1-NBI_v1.1_chromosomes_only.fas.gz).
+Next we split the file after line 26 because both subgenomes are merged into one file.
+Each subgenome consists of 13 chromosomes and each chromosome has a header line in the FASTA file.
+
+```{r, results="hide", eval=FALSE}
+library(DECIPHER)
+library(dbscan)
+library(gsrc)
+```
+
+###DECIPHER
+We use the same procedure as described for canola:
+```{r, eval = FALSE}
+fas <- c(Genome1="PATHTOGENOME1",   
+         Genome2="PATHTOGENOME2")
+db <- "PATHTODB"
+for (i in seq_along(fas)) {   
+  Seqs2DB(fas[i], "FASTA", db, names(fas[i]))
+}
+synteny <- FindSynteny(db, processors = NULL, storage = 5)
+save(synteny, file = "PATHTOSYNTENYFILE")
+```
+
+###Synteny blocks
+Again, we calculate synteny blocks from the mapped sequences.
+
+```{r, results = "hide"}
+load("/home/fabian/jlu/indel/synteny/cotton_synteny.Rdata")
+```
+```{r}
+syn_uni <- as.data.frame(synteny[[2]])
+syn_uni <- syn_uni[syn_uni$score>1500,]
+syn_uni <- syn_uni[, c(1,5,7,2,6,8)]
+syn_uni <- cbind(syn_uni, rowMeans(syn_uni[, 2:3]), rowMeans(syn_uni[, 5:6]))
+syn_uni <- syn_uni[, c(1,7,4,8)]
+colnames(syn_uni) <- c("index1", "start1", "index2", "start2")
+syn_uni <- syn_uni[order(syn_uni$index1, syn_uni$start1),]
+syn_uni$Alev <- as.factor(syn_uni$index1)
+syn_uni$Clev <- as.factor(syn_uni$index2)
+syn_uni$AGlo <- syn_uni$start1
+syn_uni$CGlo <- syn_uni$start2
+amaxs <- sapply(levels(syn_uni$Alev), function(x) max(syn_uni$start1[syn_uni$index1==x]))
+for(i in 2:length(levels(syn_uni$Alev))){
+  syn_uni$AGlo[syn_uni$index1 == levels(syn_uni$Alev)[i]] <- syn_uni$AGlo[syn_uni$index1 == levels(syn_uni$Alev)[i]] + sum(amaxs[1:(i-1)])
+}
+
+cmaxs <- sapply(levels(syn_uni$Clev), function(x) max(syn_uni$start2[syn_uni$index2==x]))
+for(i in 2:length(levels(syn_uni$Clev))){
+  syn_uni$CGlo[syn_uni$index2 == levels(syn_uni$Clev)[i]] <- syn_uni$CGlo[syn_uni$index2 == levels(syn_uni$Clev)[i]] + sum(cmaxs[1:(i-1)])
+}
+csamax <- cumsum(amaxs)
+cscmax <- cumsum(cmaxs)
+```
+Again we visualize the data and see a general synteny structure in the data.
+```{r, fig.show = "hold", fig.width = 8, fig.height = 8}
+plot(syn_uni$AGlo, syn_uni$CGlo, pch = 19, cex = 0.2, col = rgb(0, 0, 0, alpha = 0.05))
+abline(v = c(0, csamax), h=c(0, cscmax))
+```
+
+```{r}
+syn_uni2 <- syn_uni[, c(1, 2, 3, 4)]
+names(syn_uni2) <- c("chr1", "pos1", "chr2", "pos2")
+```
+
+
+```{r}
+blocks <- gsrc::find_blocks(syn_uni2,eps = 5000000, minPts = 20, minLength = 10000000, maxLength = 50000000)
+```
+
+Again, we visualize the result.
+
+```{r, fig.show = "hold", fig.width = 9, fig.height = 5}
+plot.new()
+cols <- rainbow(
+  n = 13, start = 0, end = 1, alpha = 0.2
+)
+max1 <- max(blocks$blocks$end1)
+max2 <- max(blocks$blocks$end2)
+axis(
+  3, at = (csamax - min(amaxs) / 2) / max(csamax),
+  labels = unique(blocks$blocks$chr1), tick = FALSE, cex.axis = 0.8, las = 1
+)
+axis(
+  1, at = (cscmax - min(cmaxs) / 2) / max(cscmax),
+  labels = unique(blocks$blocks$chr2), tick = FALSE, cex.axis = 0.8, las = 1
+)
+y <- c(1, 1, 0, 0)
+for (i in 1:nrow(blocks$blocks)) {
+  x <- c(
+    blocks$blocks$start1[i],
+    blocks$blocks$end1[i],
+    blocks$blocks$end2[i],
+    blocks$blocks$start2[i]
+  )
+  x <- c(x[1:2] / max1, x[3:4] / max2)
+  polygon(x, y, col = cols[unique(blocks$blocks$chr1) %in% blocks$blocks$chr1[i]])
+}
+```
+
+
+
+
+
+
+
+
+
+
+
