@@ -1,0 +1,19 @@
+citHeader("The methods within the code package can be cited as:")
+
+citEntry(
+   entry="article",
+   author = "Fabian Grandke, Rod Snowdon, Birgit Samans",
+   title = "gsrc - an R package for genome structure rearrangement calling",
+   journal = "Bioinformatics",
+   year = 2016,
+   doi = "http://dx.doi.org/10.1093/bioinformatics/btw648",
+   URL = "http://bioinformatics.oxfordjournals.org/content/10.1093/bioinformatics/btw648", 
+   eprint = "http://bioinformatics.oxfordjournals.org/content/10.1093/bioinformatics/btw648", 
+   textVersion = "Grandke et al (2016). gsrc - an R package for genome structure rearrangement calling. Bioinformatics. DOI: 10.1093/bioinformatics/btw648"   
+)
+
+
+citFooter("This free open-source software implements academic
+research by the authors and co-workers. If you use it,
+please support the project by citing the appropriate
+journal articles.")
