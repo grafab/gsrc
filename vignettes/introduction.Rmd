@@ -3,7 +3,7 @@ title: "Introduction to gsrc"
 author: "Fabian Grandke"
 date: "`r Sys.Date()`"
 output: 
-  rmarkdown::pdf_document:
+  rmarkdown::html_vignette:
     fig_caption: true
 vignette: >
   %\VignetteIndexEntry{Introduction}

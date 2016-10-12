@@ -10,7 +10,7 @@ intens_theta(raw, norm = "quantile", scaling = "mean", transf = "log",
 \arguments{
 \item{raw}{Raw_data object.}
 
-\item{norm}{Method for the normalization. Currently only quantile normalization is implemented.}
+\item{norm}{Method for the normalization. One of "none", "quantile", "median" or "both".}
 
 \item{scaling}{Logical, if each SNP should be scaled or not.}
 

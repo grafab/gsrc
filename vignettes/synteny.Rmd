@@ -2,7 +2,7 @@
 title: "Synteny Block Calculation"
 author: "Fabian Grandke"
 date: "`r Sys.Date()`"
-output: rmarkdown::pdf_document
+output: rmarkdown::html_vignette
 vignette: >
   %\VignetteIndexEntry{Synteny Block Calculation}
   %\VignetteEngine{knitr::rmarkdown}

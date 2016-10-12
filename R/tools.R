@@ -149,7 +149,8 @@ find_peak <-
 #' Require package wrapper
 #'
 #' Wrapper to require package and return an error, if it is missing.
-#'
+#' 
+#' @importFrom openxlsx read.xlsx
 #' @references http://r-pkgs.had.co.nz/description.html#dependencies
 #' @keywords internal
 require_package <- function(pkg) {
@@ -181,3 +182,4 @@ interpol <- function(theta, hcenters, vcenters) {
   ratio[is.null(ratio)] <- mean(vcenters, na.rm = TRUE)
   ratio
 }
+

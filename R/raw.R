@@ -33,7 +33,7 @@
 read_intensities <-
   function(files, dict = NULL, cnames = NULL, pos = NULL,
            beads = FALSE, sd = FALSE) {
-    if (is.data.frame(pos) && ncol(tmp) >= 3 && !names(pos) == c("name", "chromosome", "position"))
+    if (is.data.frame(pos) && ncol(pos) >= 3 && !names(pos) == c("name", "chromosome", "position"))
       stop("pos object needs to be data.fram with columns name, chromosome and position.")
     require_package("illuminaio")
     out <-
@@ -53,7 +53,7 @@ read_intensities <-
               illuminaio::readIDAT(x)$Quants[, cols]
           )
         ),
-        ncol = length(files),byrow = FALSE)
+        ncol = length(files), byrow = FALSE)
     }else{
       if (!is.null(pos)) {
         dict <- dict[dict$name %in% pos$name,]
@@ -71,7 +71,7 @@ read_intensities <-
               illuminaio::readIDAT(x)$Quants[as.character(dict$idatID), cols]
           )
         ),
-        ncol = length(files) * length(cols),byrow = FALSE)
+        ncol <- length(files) * length(cols), byrow = FALSE)
       out$snps <- dict$name
     }
     if (beads & sd) {

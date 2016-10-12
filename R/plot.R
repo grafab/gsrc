@@ -504,7 +504,7 @@ plot_global <-
 #' dat <- segm(dat)
 #' dat <- cnv(dat, dup = 0.03, del = -0.06)
 #' data("synteny_blocks", package = "brassicaData", envir = environment())
-#' dat <- trans_location(dat, synteny_blocks, min = 5)
+#' dat <- trans_location(dat, synteny_blocks, min1 = 5, min2 = 5, maxdiff = 20)
 #' plot_trans_locations(dat, sb = synteny_blocks$blocks)
 #' }
 #' @export
