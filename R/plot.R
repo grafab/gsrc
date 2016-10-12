@@ -542,13 +542,13 @@ plot_trans_locations <- function(dat, sb = NULL) {
 #' @param y.cex Character size in y-axis.
 #' @param ... are forwarded to the image() command.
 #' @import graphics
+#' @importFrom grDevices rgb
 #' @examples
+#' \dontrun{
 #' if(require(brassicaData)){
 #' data(raw_napus, package = "brassicaData", envir = environment())
-#' \dontshow{
 #' raw_napus <- filt_samp(raw_napus, raw_napus$samples[-(1:10)])
 #' raw_napus <- filt_snps(raw_napus, raw_napus$snps[-(1:100)][-(30000:30100)])
-#' }
 #' dat <- intens_theta(raw_napus)
 #' dat <- remove_suffix(dat, "_Grn")
 #' dat <- geno_baf_rratio(dat, delthresh = 11)
@@ -556,9 +556,10 @@ plot_trans_locations <- function(dat, sb = NULL) {
 #' dat <- cnv(dat, dup = 0.03, del = -0.06)
 #' plot_cnv(dat)
 #' }
+#' }
 #' @export
 plot_cnv <-
-  function(dat, lwd = 1, col = rgb(0,0,0,0.5), x.cex = 1, y.cex = 1, ...) {
+  function(dat, lwd = 1, col = grDevices::rgb(0,0,0,0.5), x.cex = 1, y.cex = 1, ...) {
     op <- graphics::par(mar = c(5.1, 6.1, 4.1, 2.1))
     graphics::image(
       dat$cnv[order(dat$chr, dat$pos),],

@@ -4,8 +4,8 @@
 \alias{plot_cnv}
 \title{Plot Copy Number Variations}
 \usage{
-plot_cnv(dat, lwd = 1, col = rgb(0, 0, 0, 0.5), x.cex = 1, y.cex = 1,
-  ...)
+plot_cnv(dat, lwd = 1, col = grDevices::rgb(0, 0, 0, 0.5), x.cex = 1,
+  y.cex = 1, ...)
 }
 \arguments{
 \item{dat}{List object, containing vectors samples, pos and chr and matrix cnv.}
@@ -25,18 +25,18 @@ Plots copy number variations in a grid to allow for comparisons between individu
 Deletions and duplications are represented in red and green, respectively.
 }
 \examples{
+\dontrun{
 if(require(brassicaData)){
-data(raw_napus, package = "brassicaData", envir = environment())
-\dontshow{
+data(raw_napus, package = "brassicaData", envir = environment())#' 
 raw_napus <- filt_samp(raw_napus, raw_napus$samples[-(1:10)])
 raw_napus <- filt_snps(raw_napus, raw_napus$snps[-(1:100)][-(30000:30100)])
-}
 dat <- intens_theta(raw_napus)
 dat <- remove_suffix(dat, "_Grn")
 dat <- geno_baf_rratio(dat, delthresh = 11)
 dat <- segm(dat)
 dat <- cnv(dat, dup = 0.03, del = -0.06)
 plot_cnv(dat)
+}
 }
 }
 
