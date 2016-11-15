@@ -27,7 +27,7 @@ Deletions and duplications are represented in red and green, respectively.
 \examples{
 \dontrun{
 if(require(brassicaData)){
-data(raw_napus, package = "brassicaData", envir = environment())#' 
+data(raw_napus, package = "brassicaData", envir = environment())
 raw_napus <- filt_samp(raw_napus, raw_napus$samples[-(1:10)])
 raw_napus <- filt_snps(raw_napus, raw_napus$snps[-(1:100)][-(30000:30100)])
 dat <- intens_theta(raw_napus)

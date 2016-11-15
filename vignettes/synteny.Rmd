@@ -185,9 +185,9 @@ We extract the required data from the synteny object, filter, transform and calc
 The function _FindSynteny_ returns a list of alignment result objects, but we only need the second object.
 
 ```{r, results = "hide"}
-load("/home/fabian/jlu/indel/synteny/brassica_synteny.Rdata")
+load("brassica_synteny_filtered.rda")
 ```
-```{r}
+```{r, eval = FALSE}
 syn_uni <- as.data.frame(synteny[[2]])
 syn_uni <- syn_uni[syn_uni$score>1500,]
 syn_uni <- syn_uni[, c(1,5,7,2,6,8)]
@@ -199,6 +199,8 @@ syn_uni$Alev <- as.factor(syn_uni$index1)
 syn_uni$Clev <- as.factor(syn_uni$index2)
 syn_uni$AGlo <- syn_uni$start1
 syn_uni$CGlo <- syn_uni$start2
+```
+```{r}
 amaxs <- sapply(levels(syn_uni$Alev), function(x) max(syn_uni$start1[syn_uni$index1==x]))
 for(i in 2:length(levels(syn_uni$Alev))){
   syn_uni$AGlo[syn_uni$index1 == levels(syn_uni$Alev)[i]] <- syn_uni$AGlo[syn_uni$index1 == levels(syn_uni$Alev)[i]] + sum(amaxs[1:(i-1)])
@@ -290,40 +292,42 @@ save(synteny, file = "PATHTOSYNTENYFILE")
 Again, we calculate synteny blocks from the mapped sequences.
 
 ```{r, results = "hide"}
-load("/home/fabian/jlu/indel/synteny/cotton_synteny.Rdata")
+load("cotton_synteny_filtered.rda")
+```
+```{r, eval = FALSE}
+syn_uniC <- as.data.frame(synteny[[2]])
+syn_uniC <- syn_uniC[syn_uniC$score>1500,]
+syn_uniC <- syn_uniC[, c(1,5,7,2,6,8)]
+syn_uniC <- cbind(syn_uniC, rowMeans(syn_uniC[, 2:3]), rowMeans(syn_uniC[, 5:6]))
+syn_uniC <- syn_uniC[, c(1,7,4,8)]
+colnames(syn_uniC) <- c("index1", "start1", "index2", "start2")
+syn_uniC <- syn_uniC[order(syn_uniC$index1, syn_uniC$start1),]
+syn_uniC$Alev <- as.factor(syn_uniC$index1)
+syn_uniC$Clev <- as.factor(syn_uniC$index2)
+syn_uniC$AGlo <- syn_uniC$start1
+syn_uniC$CGlo <- syn_uniC$start2
 ```
 ```{r}
-syn_uni <- as.data.frame(synteny[[2]])
-syn_uni <- syn_uni[syn_uni$score>1500,]
-syn_uni <- syn_uni[, c(1,5,7,2,6,8)]
-syn_uni <- cbind(syn_uni, rowMeans(syn_uni[, 2:3]), rowMeans(syn_uni[, 5:6]))
-syn_uni <- syn_uni[, c(1,7,4,8)]
-colnames(syn_uni) <- c("index1", "start1", "index2", "start2")
-syn_uni <- syn_uni[order(syn_uni$index1, syn_uni$start1),]
-syn_uni$Alev <- as.factor(syn_uni$index1)
-syn_uni$Clev <- as.factor(syn_uni$index2)
-syn_uni$AGlo <- syn_uni$start1
-syn_uni$CGlo <- syn_uni$start2
-amaxs <- sapply(levels(syn_uni$Alev), function(x) max(syn_uni$start1[syn_uni$index1==x]))
-for(i in 2:length(levels(syn_uni$Alev))){
-  syn_uni$AGlo[syn_uni$index1 == levels(syn_uni$Alev)[i]] <- syn_uni$AGlo[syn_uni$index1 == levels(syn_uni$Alev)[i]] + sum(amaxs[1:(i-1)])
+amaxs <- sapply(levels(syn_uniC$Alev), function(x) max(syn_uniC$start1[syn_uniC$index1==x]))
+for(i in 2:length(levels(syn_uniC$Alev))){
+  syn_uniC$AGlo[syn_uniC$index1 == levels(syn_uniC$Alev)[i]] <- syn_uniC$AGlo[syn_uniC$index1 == levels(syn_uniC$Alev)[i]] + sum(amaxs[1:(i-1)])
 }
 
-cmaxs <- sapply(levels(syn_uni$Clev), function(x) max(syn_uni$start2[syn_uni$index2==x]))
-for(i in 2:length(levels(syn_uni$Clev))){
-  syn_uni$CGlo[syn_uni$index2 == levels(syn_uni$Clev)[i]] <- syn_uni$CGlo[syn_uni$index2 == levels(syn_uni$Clev)[i]] + sum(cmaxs[1:(i-1)])
+cmaxs <- sapply(levels(syn_uniC$Clev), function(x) max(syn_uniC$start2[syn_uniC$index2==x]))
+for(i in 2:length(levels(syn_uniC$Clev))){
+  syn_uniC$CGlo[syn_uniC$index2 == levels(syn_uniC$Clev)[i]] <- syn_uniC$CGlo[syn_uniC$index2 == levels(syn_uniC$Clev)[i]] + sum(cmaxs[1:(i-1)])
 }
 csamax <- cumsum(amaxs)
 cscmax <- cumsum(cmaxs)
 ```
 Again we visualize the data and see a general synteny structure in the data.
 ```{r, fig.show = "hold", fig.width = 8, fig.height = 8}
-plot(syn_uni$AGlo, syn_uni$CGlo, pch = 19, cex = 0.2, col = rgb(0, 0, 0, alpha = 0.05))
+plot(syn_uniC$AGlo, syn_uniC$CGlo, pch = 19, cex = 0.2, col = rgb(0, 0, 0, alpha = 0.05))
 abline(v = c(0, csamax), h=c(0, cscmax))
 ```
 
 ```{r}
-syn_uni2 <- syn_uni[, c(1, 2, 3, 4)]
+syn_uni2 <- syn_uniC[, c(1, 2, 3, 4)]
 names(syn_uni2) <- c("chr1", "pos1", "chr2", "pos2")
 ```
 

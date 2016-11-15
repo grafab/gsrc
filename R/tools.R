@@ -183,3 +183,24 @@ interpol <- function(theta, hcenters, vcenters) {
   ratio
 }
 
+merge_raw <- function(rd1, rd2){
+  if(class(rd1) != class(rd2)|| class(rd1) !="raw_data"){
+    stop("At least one of the objects is not of class raw_data.")
+  } 
+  if(length(rd1) != length(rd2)){
+    stop("Provided raw_data have different numbers of objects.")
+  } 
+  if(length(rd1$chr) != length(rd2$chr)){
+    stop("The number of SNPs differ between the two raw_data objects.")
+  }
+  if(sum(!rd1$snps %in% rd2$snps) > 0){
+    warning("The SNP names differ between the two raw_data objects.")
+  }
+  if(!all(rd1$snps == rd2$snps)){
+    warning("The SNP orders differ between the two raw_data objects.")
+  }
+  rdnew <- rd1
+  rdnew$samples <- c(rd1$samples, rd2$samples)
+  rdnew$raw <- cbind(rd1$raw, rd2$raw)
+  rdnew
+}

@@ -24,11 +24,9 @@ The remainder of our data set is included as processed R data.
 
 # Installation
 ```{r, results="hide"}
-#library(gsrc)
-#require(devtools)
-#devtools::install_github("grafab/brassicaData")
-#devtools::install_github("grafab/gsrc")
-devtools::load_all()
+library(gsrc)
+require(devtools)
+devtools::install_github("grafab/brassicaData")
 ```
 
 # Input data
@@ -281,7 +279,7 @@ rm(raw_napus)
 Based on the theta and intensity values calculate __B-Allele frequencies__ and __Log R ratios__.
 
 ## Genotype calling
-We use a one dimensional k-means clustering from [Ckmeans.1d.dp](http://cran.r-project.org/package=Ckmeans.1d.dp) for the genotype calling.
+We use a one dimensional k-means clustering from [Ckmeans.1d.dp](https://CRAN.R-project.org/package=Ckmeans.1d.dp) for the genotype calling.
 We treat each SNP as diploid and allow a maximum of three clusters.
 
 ## B-Allele frequency and Log R ratio

@@ -18,6 +18,7 @@ norm_data object
 Short CNV stretches can be filtered out.
 }
 \examples{
+\dontrun{
 if(require(brassicaData)){
 data("raw_napus", package = "brassicaData", envir = environment())
 dat <- intens_theta(raw_napus)
@@ -26,6 +27,7 @@ dat <- geno_baf_rratio(dat, delthresh = 11)
 dat <- segm(dat)
 dat <- cnv(dat, dup = 0.03, del = -0.06)
 dat <- filter_cnv(dat)
+}
 }
 }
 

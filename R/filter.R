@@ -146,6 +146,7 @@ filt_snps.norm_data <- function(dat, filt) {
 #' @param thresh Integer, lower threshold for filtering CNVs.
 #' @return norm_data object
 #' @examples
+#' \dontrun{
 #' if(require(brassicaData)){
 #' data("raw_napus", package = "brassicaData", envir = environment())
 #' dat <- intens_theta(raw_napus)
@@ -154,6 +155,7 @@ filt_snps.norm_data <- function(dat, filt) {
 #' dat <- segm(dat)
 #' dat <- cnv(dat, dup = 0.03, del = -0.06)
 #' dat <- filter_cnv(dat)
+#' }
 #' }
 #' @export
 filter_cnv <- function(dat, thresh = 5) {

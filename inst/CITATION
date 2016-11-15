@@ -6,10 +6,9 @@ citEntry(
    title = "gsrc - an R package for genome structure rearrangement calling",
    journal = "Bioinformatics",
    year = 2016,
-   doi = "http://dx.doi.org/10.1093/bioinformatics/btw648",
    URL = "http://bioinformatics.oxfordjournals.org/content/10.1093/bioinformatics/btw648", 
    eprint = "http://bioinformatics.oxfordjournals.org/content/10.1093/bioinformatics/btw648", 
-   textVersion = "Grandke et al (2016). gsrc - an R package for genome structure rearrangement calling. Bioinformatics. DOI: 10.1093/bioinformatics/btw648"   
+   textVersion = "Grandke et al (2016). gsrc - an R package for genome structure rearrangement calling. Bioinformatics."   
 )
 
 
