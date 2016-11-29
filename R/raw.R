@@ -71,7 +71,7 @@ read_intensities <-
               illuminaio::readIDAT(x)$Quants[as.character(dict$idatID), cols]
           )
         ),
-        ncol <- length(files) * length(cols), byrow = FALSE)
+        ncol = length(files) * length(cols), byrow = FALSE)
       out$snps <- dict$name
     }
     if (beads & sd) {
