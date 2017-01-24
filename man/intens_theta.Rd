@@ -5,7 +5,7 @@
 \title{Preprocess raw values and calculate Intensity and Theta values}
 \usage{
 intens_theta(raw, norm = "quantile", scaling = "mean", transf = "log",
-  pn = 2)
+  pn = 2, postnorm = FALSE)
 }
 \arguments{
 \item{raw}{Raw_data object.}
@@ -18,6 +18,8 @@ intens_theta(raw, norm = "quantile", scaling = "mean", transf = "log",
 "none", "log" and "fourth-root" are implemented.}
 
 \item{pn}{Numeric, p-norm for the intensity calculation.}
+
+\item{postnorm}{Logical, if intensity values should be median normalized row- and columns-wise.}
 }
 \value{
 List with two matrices "intensity" (signal intensities) and "theta" (genotype value).

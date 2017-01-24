@@ -1,3 +1,8 @@
+gsrc 1.1.1 (2017-01-24)
+--------------------------------------------------------------------
+fixed bug in plot_cnv
+added normalization parameter to intens_theta
+
 gsrc 1.1 (2016-10-12)
 --------------------------------------------------------------------
 Updated version which will be released to CRAN
