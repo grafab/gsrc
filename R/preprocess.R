@@ -6,6 +6,7 @@
 #' @param transf Method for transformation of the raw values.
 #' "none", "log" and "fourth-root" are implemented.
 #' @param pn Numeric, p-norm for the intensity calculation.
+#' @param postnorm Logical, if intensity values should be median normalized row- and columns-wise.
 #' @return List with two matrices "intensity" (signal intensities) and "theta" (genotype value).
 #' @examples
 #' if(require(brassicaData)){
@@ -18,7 +19,7 @@
 #' }
 #' @export
 intens_theta <- function(raw, norm = "quantile",  scaling = "mean",
-                         transf = "log", pn = 2) {
+                         transf = "log", pn = 2, postnorm = FALSE) {
   norm <-
     match.arg(arg = norm, choices = c("none", "quantile", "median", "both"))
   transf <-
@@ -73,6 +74,12 @@ intens_theta <- function(raw, norm = "quantile",  scaling = "mean",
                                         function(x)
                                           (raw$raw[, x] ^ pn + raw$raw[, x + 1] ^ pn) ^ (1 / pn))),
                           ncol = ncol(raw$raw) / 2, byrow = FALSE)
+  if(postnorm){
+    oaMean <- mean(out$intensity)              
+    rowMed <- apply(intens,1,median) 
+    out$intensity <- sweep(out$intensity,1,rowMed,"-")
+    out$intensity <- sweep(out$intensity, 2, apply(out$intensity,2,median),"-") + oaMean
+  }
   out$theta <- matrix(unlist(lapply(sec,
                                     function(x)
                                       atan2(raw$raw[, x], raw$raw[, x + 1]) / (pi / 2))),
