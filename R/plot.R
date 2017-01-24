@@ -572,7 +572,7 @@ plot_cnv <-
     graphics::axis(
       side = 2,
       at = seq(0,1,length.out = length(dat$samples)),
-      labels = rev(dat$samples),
+      labels = dat$samples,
       las = 1,
       lwd = 0,
       lwd.ticks = 1,
